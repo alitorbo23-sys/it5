@@ -1,0 +1,2292 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="تیپاکس‌یار" />
+  <link id="pwaManifestLink" rel="manifest" href="" />
+  <title>تیپاکس‌یار مشهد | سامانه هوشمند توزیع، اسکن رگباری و حسابداری لحظه‌ای</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vazirmatn Persian Font -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+  <!-- SheetJS for XLSX/CSV Import & Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- SortableJS for Touch Hold & Drag Reordering -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <!-- HTML5-QRCode for Native Barcode Decoding -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * {
+      font-family: 'Vazirmatn', sans-serif !important;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, select {
+      user-select: text !important;
+    }
+    body {
+      background-color: #020617;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    .sortable-ghost {
+      opacity: 0.35;
+      background: #1e293b !important;
+      border: 2px dashed #38bdf8 !important;
+    }
+    .sortable-drag {
+      background: #0f172a !important;
+      box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.85) !important;
+      transform: scale(1.02);
+      z-index: 9999 !important;
+    }
+    .drag-handle {
+      touch-action: none;
+      cursor: grab;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    @keyframes flashShutter {
+      0% { opacity: 0.9; }
+      100% { opacity: 0; }
+    }
+    .shutter-flash {
+      animation: flashShutter 0.15s ease-out forwards;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+  </style>
+</head>
+<body class="pb-24 min-h-screen bg-slate-950 text-slate-100">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 py-2.5 shadow-lg">
+    <div class="flex items-center justify-between max-w-2xl mx-auto gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-950 font-black text-lg text-white border border-emerald-400/30 shrink-0">
+          TY
+        </div>
+        <div class="truncate">
+          <div class="flex items-center gap-1.5">
+            <h1 class="font-bold text-sm sm:text-base text-white leading-tight truncate">تیپاکس‌یار مشهد</h1>
+            <button id="aiKeyHeaderBadge" onclick="openApiKeyModal()" class="cursor-pointer text-[10px] bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-full font-bold shrink-0">
+              🔑 کلید اسکنر AI
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 mt-0.5 truncate">سیدرضی • امامت • جلال • استقلال • معلم • دانش‌آموز • آموزگار • فلاحی</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- Non-intrusive Add to Home Screen Button (Auto-hides when installed) -->
+        <button id="pwaInstallBtn" onclick="triggerPwaInstall()" class="hidden text-[11px] bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-300 px-2.5 py-2 rounded-xl font-bold flex items-center gap-1 transition active:scale-95">
+          <span>📲</span>
+          <span>نصب اپ</span>
+        </button>
+        <button onclick="openBurstCameraDirectly()" class="text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-2 rounded-xl font-black shadow flex items-center gap-1 transition active:scale-95">
+          <span>📸</span>
+          <span>اسکن رگباری</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-2xl mx-auto px-3 pt-3 space-y-4">
+
+    <!-- LIVE REAL-TIME FINANCIAL BAR (ALWAYS VISIBLE SUMMARY) -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-2.5 shadow-md">
+      <div class="grid grid-cols-4 gap-1.5 text-center text-[11px]">
+        <div onclick="switchTab('reports')" class="bg-slate-950 border border-sky-500/30 rounded-xl p-1.5 cursor-pointer">
+          <div class="text-[9px] text-slate-400">💳 پوز (POS)</div>
+          <div id="topBarPos" class="font-black text-sky-400 text-xs mt-0.5">0</div>
+        </div>
+        <div onclick="switchTab('reports')" class="bg-slate-950 border border-indigo-500/30 rounded-xl p-1.5 cursor-pointer">
+          <div class="text-[9px] text-slate-400">📲 کارت‌به‌کارت</div>
+          <div id="topBarCard" class="font-black text-indigo-400 text-xs mt-0.5">0</div>
+        </div>
+        <div onclick="switchTab('reports')" class="bg-slate-950 border border-emerald-500/30 rounded-xl p-1.5 cursor-pointer">
+          <div class="text-[9px] text-slate-400">💵 نقدی</div>
+          <div id="topBarCash" class="font-black text-emerald-400 text-xs mt-0.5">0</div>
+        </div>
+        <div onclick="filterRouteFromDash('UNPAID')" class="bg-rose-950/40 border border-rose-500/40 rounded-xl p-1.5 cursor-pointer">
+          <div class="text-[9px] text-rose-300 font-bold">⚠️ بدهکاران</div>
+          <div id="topBarUnpaid" class="font-black text-rose-400 text-xs mt-0.5">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: DASHBOARD & LIVE ACCOUNTING -->
+    <section id="tab-dashboard" class="tab-content space-y-4">
+      <!-- Fast Burst Scanner Callout -->
+      <div class="bg-gradient-to-l from-indigo-950 via-slate-900 to-emerald-950 border border-emerald-500/40 rounded-2xl p-3.5 shadow-lg flex items-center justify-between gap-3">
+        <div class="space-y-1">
+          <div class="inline-flex items-center gap-1.5 text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full font-bold">
+            <span>⚡ اسکن رگباری بدون مکث و بدون ذخیره در گالری</span>
+          </div>
+          <h2 class="font-bold text-sm text-white">استخراج درجا: نام + موبایل + آدرس + بارکد + پس‌کرایه</h2>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            پشت‌سرهم از لیبل بسته‌ها عکس بگیرید یا تا ۱۰۰ عکس از گالری انتخاب کنید؛ همه به صورت موازی و درجا وارد لیست می‌شوند.
+          </p>
+        </div>
+        <button onclick="openBurstCameraDirectly()" class="shrink-0 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3.5 py-3 rounded-xl shadow-md active:scale-95">
+          شروع اسکن ⬅
+        </button>
+      </div>
+
+      <!-- Daily Progress & Status Counters -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3.5">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-slate-400 font-medium">پیشرفت توزیع امروز (<span id="jalaliDateBadge"></span>)</span>
+          <span id="dashProgressText" class="text-sm font-black text-emerald-400">0%</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="dashProgressBar" class="h-full bg-gradient-to-l from-emerald-400 to-teal-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <div class="grid grid-cols-5 gap-1.5 text-center">
+          <div onclick="filterRouteFromDash('ALL')" class="bg-slate-800/70 border border-slate-700/60 rounded-xl p-2 cursor-pointer active:scale-95 transition">
+            <div id="statTotal" class="text-base font-black text-white">0</div>
+            <div class="text-[10px] text-slate-400">کل بسته‌ها</div>
+          </div>
+          <div onclick="filterRouteFromDash('DELIVERED')" class="bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-2 cursor-pointer active:scale-95 transition">
+            <div id="statDelivered" class="text-base font-black text-emerald-400">0</div>
+            <div class="text-[10px] text-emerald-300/80">تحویل‌شده</div>
+          </div>
+          <div onclick="filterRouteFromDash('PENDING')" class="bg-sky-950/40 border border-sky-800/40 rounded-xl p-2 cursor-pointer active:scale-95 transition">
+            <div id="statPending" class="text-base font-black text-sky-400">0</div>
+            <div class="text-[10px] text-sky-300/80">مانده</div>
+          </div>
+          <div onclick="filterRouteFromDash('ABSENT')" class="bg-amber-950/40 border border-amber-800/40 rounded-xl p-2 cursor-pointer active:scale-95 transition">
+            <div id="statFailed" class="text-base font-black text-amber-400">0</div>
+            <div class="text-[10px] text-amber-300/80">عدم حضور</div>
+          </div>
+          <div onclick="filterRouteFromDash('UNPAID')" class="bg-rose-950/60 border border-rose-600/50 rounded-xl p-2 cursor-pointer active:scale-95 transition">
+            <div id="statUnpaid" class="text-base font-black text-rose-400">0</div>
+            <div class="text-[10px] text-rose-300 font-bold">بدهکار</div>
+          </div>
+        </div>
+
+        <!-- EXACT REAL-TIME ACCOUNTING BREAKDOWN -->
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>🧮</span>
+              <span>صندوق و حسابداری لحظه‌ای امروز:</span>
+            </span>
+            <span id="dashTotalCollectedBadge" class="text-xs font-black text-emerald-400">کل وصولی: ۰ تومان</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-slate-900 border border-sky-500/30 rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">💳 کارتخوان (POS)</div>
+              <div id="accPosSum" class="font-black text-sky-400 text-xs sm:text-sm mt-1">0 تومان</div>
+              <div id="accPosCount" class="text-[10px] text-slate-500 mt-0.5">0 تراکنش</div>
+            </div>
+            <div class="bg-slate-900 border border-indigo-500/30 rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">📲 کارت‌به‌کارت</div>
+              <div id="accCardSum" class="font-black text-indigo-400 text-xs sm:text-sm mt-1">0 تومان</div>
+              <div id="accCardCount" class="text-[10px] text-slate-500 mt-0.5">0 تراکنش</div>
+            </div>
+            <div class="bg-slate-900 border border-emerald-500/30 rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-400">💵 دریافت نقدی</div>
+              <div id="accCashSum" class="font-black text-emerald-400 text-xs sm:text-sm mt-1">0 تومان</div>
+              <div id="accCashCount" class="text-[10px] text-slate-500 mt-0.5">0 تراکنش</div>
+            </div>
+          </div>
+
+          <!-- Unpaid / COD Total Banner -->
+          <div class="bg-rose-950/30 border border-rose-500/40 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div>
+              <div class="text-rose-200/90 text-[11px]">⚠️ مانده دریافت‌نشده (پس‌کرایه / بدهکاران):</div>
+              <div id="dashUnpaidAmountSum" class="font-black text-rose-400 text-sm mt-0.5">0 تومان</div>
+            </div>
+            <button onclick="filterRouteFromDash('UNPAID')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] px-3 py-2 rounded-xl shadow">
+              مشاهده و تماس با بدهکاران ⬅
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next Active Stop Card -->
+      <div id="nextStopCard" class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-4 shadow-lg"></div>
+
+      <!-- Mashhad Street Zones Breakdown -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="font-bold text-sm text-white">تفکیک پهنه‌های پخش مشهد</h2>
+            <p class="text-[10px] text-slate-400">تشخیص خودکار خیابان، کوچه و زوج/فرد</p>
+          </div>
+          <button onclick="sortByMashhadZones()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold transition">
+            ⚡ چیدمان خودکار مسیر
+          </button>
+        </div>
+        <div id="zoneStatsContainer" class="grid grid-cols-2 gap-2 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: ROUTE & TOUCH DRAG-AND-DROP + PAYMENT & DELIVERY CONTROLS -->
+    <section id="tab-route" class="tab-content hidden space-y-3">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h2 class="font-bold text-sm text-white">لیست توزیع، بارکد، تماس و تسویه آنی</h2>
+            <p class="text-[11px] text-slate-400">برای جابجایی، دست‌تان را روی <span class="text-sky-400 font-bold">☰</span> نگه دارید و بکشید</p>
+          </div>
+          <button onclick="switchTab('import')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold shrink-0">
+            ➕ ثبت بسته
+          </button>
+        </div>
+
+        <!-- Status & Payment Filter Pills -->
+        <div class="flex overflow-x-auto gap-1.5 pb-1">
+          <button onclick="setRouteQuickFilter('ALL')" id="flt-ALL" class="flt-pill shrink-0 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold">
+            همه (<span id="cnt-ALL">0</span>)
+          </button>
+          <button onclick="setRouteQuickFilter('UNPAID')" id="flt-UNPAID" class="flt-pill shrink-0 text-xs bg-slate-800 border border-rose-500/40 text-rose-300 px-3 py-1.5 rounded-xl font-bold">
+            💳 بدهکاران (<span id="cnt-UNPAID">0</span>)
+          </button>
+          <button onclick="setRouteQuickFilter('PAID')" id="flt-PAID" class="flt-pill shrink-0 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold">
+            💰 تسویه‌شده (<span id="cnt-PAID">0</span>)
+          </button>
+          <button onclick="setRouteQuickFilter('PENDING')" id="flt-PENDING" class="flt-pill shrink-0 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold">
+            ⏳ مانده (<span id="cnt-PENDING">0</span>)
+          </button>
+          <button onclick="setRouteQuickFilter('DELIVERED')" id="flt-DELIVERED" class="flt-pill shrink-0 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold">
+            ✅ تحویل‌شده (<span id="cnt-DELIVERED">0</span>)
+          </button>
+          <button onclick="setRouteQuickFilter('ABSENT')" id="flt-ABSENT" class="flt-pill shrink-0 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold">
+            🚪 عدم حضور (<span id="cnt-ABSENT">0</span>)
+          </button>
+        </div>
+
+        <!-- Unpaid Filter Summary Banner -->
+        <div id="routeUnpaidSummaryBar" class="hidden bg-rose-950/50 border border-rose-500/50 rounded-xl px-3 py-2.5 space-y-1 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-rose-200 font-bold">💳 جمع کل بدهی دریافت‌نشده:</span>
+            <span id="routeUnpaidTotalText" class="font-black text-rose-400 text-sm">0 تومان</span>
+          </div>
+          <div class="text-[11px] text-rose-200/80">
+            شماره تماس مستقیم، پیامک آماده و انتخاب روش تسویه (پوز/کارت‌به‌کارت/نقد) روی تمام کارت‌ها فعال است.
+          </div>
+        </div>
+
+        <!-- Setting: Auto Move Delivered to Bottom -->
+        <div class="flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl text-xs border border-slate-800">
+          <span class="text-slate-300">انتقال خودکار بسته‌های تحویل‌شده و تسویه‌شده به انتهای لیست:</span>
+          <input type="checkbox" id="autoMoveDeliveredCheck" checked onchange="toggleAutoMoveDelivered()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" />
+        </div>
+
+        <!-- Ordering Buttons -->
+        <div class="flex flex-wrap gap-1.5">
+          <button onclick="sortByMashhadZones()" class="text-[11px] bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 px-2.5 py-1.5 rounded-xl font-bold">
+            ⚡ چیدمان هوشمند خیابان‌ها
+          </button>
+          <button onclick="reverseRouteOrder()" class="text-[11px] bg-slate-800 border border-slate-700 text-slate-200 px-2.5 py-1.5 rounded-xl">
+            🔄 معکوس (آخر به اول)
+          </button>
+        </div>
+
+        <!-- Search & Street Filter -->
+        <div class="flex gap-2">
+          <input id="routeSearchInput" oninput="renderRouteList()" type="text" placeholder="جستجوی نام، آدرس، بارکد، کد تحویل، موبایل..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500" />
+          <select id="routeZoneFilter" onchange="renderRouteList()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2 text-xs text-slate-200">
+            <option value="ALL">همه خیابان‌ها</option>
+            <option value="سیدرضی">سیدرضی</option>
+            <option value="امامت">امامت</option>
+            <option value="جلال">جلال</option>
+            <option value="استقلال">استقلال</option>
+            <option value="معلم">معلم</option>
+            <option value="دانش‌آموز">دانش‌آموز</option>
+            <option value="آموزگار">آموزگار</option>
+            <option value="فلاحی">فلاحی</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Touch Sortable List -->
+      <div id="sortableRouteList" class="space-y-2.5 pb-8"></div>
+    </section>
+
+    <!-- TAB 3: ULTRA-FAST ZERO-GALLERY BURST CAMERA & PARALLEL AI OCR -->
+    <section id="tab-scanner" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3.5">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h2 class="font-bold text-sm text-white">اسکنر رگباری برچسب بسته و دست‌خط (بدون مکث)</h2>
+            <p class="text-[11px] text-slate-400">استخراج همزمان و درجای نام، موبایل، آدرس کامل، بارکد و پس‌کرایه</p>
+          </div>
+          <button onclick="openApiKeyModal()" class="text-[11px] bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2.5 py-1.5 rounded-xl font-bold shrink-0">
+            🔑 تنظیم کلید AI
+          </button>
+        </div>
+
+        <!-- Warning Banner if API Key is Missing on External Host (GitHub Pages) -->
+        <div id="externalApiKeyWarning" class="hidden bg-amber-950/60 border border-amber-500/60 rounded-2xl p-3 text-xs space-y-2">
+          <div class="font-bold text-amber-300 flex items-center gap-1.5">
+            <span>⚠️</span>
+            <span>برای کار کردن اسکنر هوش مصنوعی در گیت‌هاب/کروم، کلید رایگان AI را وارد کنید!</span>
+          </div>
+          <p class="text-[11px] text-amber-100/90 leading-relaxed">
+            در گیت‌هاب یا مرورگر گوشی، برای اینکه عکس لیبل‌ها درجا استخراج شود، یک بار روی دکمه زیر بزنید و کلید رایگان Google AI Studio را ذخیره کنید.
+          </p>
+          <button onclick="openApiKeyModal()" class="bg-amber-500 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs">
+            🔑 وارد کردن کلید رایگان هوش مصنوعی
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <button onclick="startBurstCamera()" class="flex items-center justify-between bg-gradient-to-l from-emerald-600 to-teal-600 text-white font-black text-xs p-3.5 rounded-2xl shadow-lg border border-emerald-400/40 active:scale-95 transition">
+            <div class="text-right">
+              <div class="text-sm flex items-center gap-1.5">
+                <span>📸</span>
+                <span>دوربین رگباری (بدون ذخیره در گالری)</span>
+              </div>
+              <div class="text-[10px] text-emerald-100 font-normal mt-0.5">پشت‌سرهم عکس بگیرید؛ درجا استخراج و اضافه می‌شود</div>
+            </div>
+            <span class="bg-black/30 px-2.5 py-1 rounded-xl text-[11px]">شروع ⬅</span>
+          </button>
+
+          <label class="flex items-center justify-between bg-gradient-to-l from-sky-600 to-indigo-600 text-white font-black text-xs p-3.5 rounded-2xl shadow-lg border border-sky-400/40 cursor-pointer active:scale-95 transition">
+            <div class="text-right">
+              <div class="text-sm flex items-center gap-1.5">
+                <span>🖼️</span>
+                <span>انتخاب ۱ تا ۱۰۰ عکس از گالری</span>
+              </div>
+              <div class="text-[10px] text-sky-100 font-normal mt-0.5">پردازش موازی ۶ عکس با هم در کسری از ثانیه</div>
+            </div>
+            <span class="bg-black/30 px-2.5 py-1 rounded-xl text-[11px]">انتخاب ⬅</span>
+            <input type="file" accept="image/*" multiple onchange="handleOcrImageFiles(event)" class="hidden" />
+          </label>
+        </div>
+
+        <!-- ZERO-GALLERY BURST CAMERA VIEWPORT -->
+        <div id="burstCameraBox" class="hidden bg-slate-950 border-2 border-emerald-500/60 rounded-2xl p-2.5 space-y-2.5 shadow-2xl">
+          <div class="flex items-center justify-between px-1">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+              <span class="text-xs font-bold text-emerald-300">دوربین رگباری فعال (ذخیره در گالری: خاموش ❌)</span>
+            </div>
+            <button onclick="stopBurstCamera()" class="text-xs bg-rose-600/30 text-rose-300 px-2.5 py-1 rounded-lg font-bold">
+              بستن دوربین ✕
+            </button>
+          </div>
+
+          <div class="relative rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center">
+            <video id="burstVideoEl" autoplay playsinline muted class="w-full h-full object-cover"></video>
+            <div id="shutterFlashOverlay" class="pointer-events-none absolute inset-0 bg-white opacity-0"></div>
+            <div class="absolute inset-3 border-2 border-dashed border-emerald-400/60 rounded-xl pointer-events-none flex flex-col justify-between p-2">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] bg-black/75 text-emerald-300 px-2 py-0.5 rounded-md font-bold">برچسب تیپاکس / آدرس گیرنده</span>
+                <span id="burstShotCounter" class="text-xs bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-black">0 عکس</span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="triggerBurstCapture()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition">
+            <span class="text-lg">⚡</span>
+            <span>ثبت عکس فوری (بزنید و بدون مکث سراغ بسته بعدی بروید!)</span>
+          </button>
+        </div>
+
+        <!-- BATCH QUEUE & LIVE EXTRACTED CARDS -->
+        <div id="batchOcrContainer" class="hidden bg-slate-950 border border-emerald-500/40 rounded-2xl p-3 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span id="batchSpinner" class="inline-block w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+              <span id="batchProgressTitle" class="text-xs font-bold text-emerald-400">در حال استخراج فوق‌سریع مشخصات...</span>
+            </div>
+            <span id="batchCounterBadge" class="text-xs font-black bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-1 rounded-xl">0 / 0</span>
+          </div>
+
+          <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+            <div id="batchProgressBar" class="h-full bg-gradient-to-l from-emerald-400 to-sky-500 transition-all duration-150" style="width: 0%"></div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="switchTab('route')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-2.5 rounded-xl shadow">
+              ✅ مشاهده در لیست توزیع (<span id="batchReadyCount">0</span> مرسوله استخراج شد)
+            </button>
+            <button onclick="retryFailedBatchItems()" id="btnRetryFailedOcr" class="hidden bg-amber-500 text-slate-950 text-xs px-3 rounded-xl font-black">
+              🔄 تلاش مجدد
+            </button>
+            <button onclick="clearBatchQueue()" class="bg-slate-800 text-slate-300 text-xs px-3 rounded-xl font-bold">
+              پاکسازی صف
+            </button>
+          </div>
+
+          <div id="batchItemsList" class="space-y-2.5 max-h-[450px] overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Quick Text Paste Parser -->
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 space-y-2">
+          <div class="text-xs font-bold text-sky-400">📋 استخراج فوری از متن یا لیست کپی‌شده:</div>
+          <textarea id="rawTextPasteInput" rows="2" placeholder="اگر متن آدرس و شماره و بارکد را کپی کرده‌اید اینجا Paste کنید تا خودش درجا تفکیک کند..." class="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-sky-500"></textarea>
+          <button onclick="extractFromPastedText()" class="w-full bg-sky-600/20 border border-sky-500/40 text-sky-300 font-bold text-xs py-2 rounded-xl">
+            ⚡ تفکیک خودکار نام، موبایل، آدرس، بارکد و مبلغ از متن
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: SMART EXCEL IMPORT / MANUAL ADD -->
+    <section id="tab-import" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="font-bold text-sm text-white">ورود هوشمند از فایل اکسل (XLSX / CSV)</h2>
+            <p class="text-[11px] text-slate-400">تشخیص خودکار نام، موبایل، آدرس کامل، بارکد و مبلغ پس‌کرایه</p>
+          </div>
+          <button onclick="downloadSampleTemplate()" class="text-xs bg-slate-800 border border-slate-700 text-emerald-400 px-2.5 py-1.5 rounded-xl font-bold">
+            ⬇️ دانلود نمونه اکسل
+          </button>
+        </div>
+
+        <label class="block w-full border-2 border-dashed border-emerald-500/50 hover:border-emerald-400 bg-emerald-950/20 rounded-2xl p-5 text-center cursor-pointer transition">
+          <div class="text-2xl mb-1">📂</div>
+          <div class="text-xs font-bold text-emerald-300">انتخاب فایل اکسل (.xlsx یا .csv)</div>
+          <div class="text-[10px] text-slate-400 mt-1">اسکن هوشمند تمام سلول‌ها برای پیدا کردن شماره موبایل، بارکد و آدرس بدون خطا</div>
+          <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" onchange="handleExcelFileSelect(event)" class="hidden" />
+        </label>
+
+        <div id="importMappingBox" class="hidden bg-slate-950 border border-emerald-500/40 rounded-2xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-400">✅ فایل خوانده شد؛ تطبیق خودکار ستون‌ها:</span>
+            <span id="excelRowCountBadge" class="text-[11px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-lg font-bold">0 ردیف</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5 text-xs">
+            <div>
+              <label class="text-slate-400 block mb-1">👤 نام گیرنده:</label>
+              <select id="mapColName" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">📞 شماره موبایل / تماس:</label>
+              <select id="mapColPhone" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+            <div class="col-span-2">
+              <label class="text-slate-400 block mb-1">📍 آدرس کامل گیرنده:</label>
+              <select id="mapColAddress" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">📦 شماره بارکد / رهگیری:</label>
+              <select id="mapColBarcode" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+            <div>
+              <label class="text-slate-400 block mb-1">💳 مبلغ پس‌کرایه / بدهی (تومان):</label>
+              <select id="mapColAmount" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+            <div class="col-span-2">
+              <label class="text-slate-400 block mb-1">📝 کد تحویل / توضیحات:</label>
+              <select id="mapColNotes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
+            </div>
+          </div>
+          <button onclick="confirmExcelImport()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs py-3 rounded-xl shadow-lg">
+            ✅ تایید و استخراج دقیق همه ردیف‌ها به لیست توزیع
+          </button>
+        </div>
+      </div>
+
+      <!-- Manual Single Parcel Entry -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <h3 class="font-bold text-sm text-white">ثبت دستی سریع مرسوله</h3>
+        <div class="grid grid-cols-2 gap-2.5 text-xs">
+          <input id="addName" type="text" placeholder="نام گیرنده" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" />
+          <input id="addPhone" type="tel" dir="ltr" placeholder="0915... موبایل" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-right text-white font-mono" />
+          <input id="addAddress" type="text" placeholder="آدرس کامل (مثلاً سیدرضی 57 پلاک 14)" class="col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" />
+          <input id="addBarcode" type="text" dir="ltr" placeholder="شماره بارکد / رهگیری" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-right text-white font-mono" />
+          <input id="addCode" type="text" dir="ltr" placeholder="کد تحویل (اختیاری)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-right text-white font-mono" />
+          <select id="addPaymentStatus" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">
+            <option value="PAID">💰 از قبل تسویه شده</option>
+            <option value="UNPAID">💳 پس‌کرایه / بدهکار (پرداخت در محل)</option>
+          </select>
+          <input id="addPaymentAmount" type="text" inputmode="numeric" dir="ltr" placeholder="مبلغ به تومان (مثلاً 120000)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-right text-rose-300 font-mono font-bold" />
+        </div>
+        <button onclick="addManualParcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 rounded-xl shadow">
+          ➕ افزودن به لیست توزیع
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 5: REAL-TIME FINANCIAL LEDGER & EXPORT -->
+    <section id="tab-reports" class="tab-content hidden space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div>
+            <h2 class="font-bold text-sm text-white">📊 ترازنامه لحظه‌ای و تفکیک دقیق حسابداری</h2>
+            <p class="text-[11px] text-slate-400">بروزرسانی آنی با هر تغییر در وضعیت پرداخت یا تحویل</p>
+          </div>
+          <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full font-bold">⚡ زنده (Real-Time)</span>
+        </div>
+
+        <!-- Detailed Summary Box -->
+        <div id="reportAccountingSummaryBox" class="bg-slate-950 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 text-xs"></div>
+
+        <!-- Itemized Breakdown by Method (POS / CARD / CASH / UNPAID) -->
+        <div class="space-y-2.5">
+          <h3 class="text-xs font-bold text-slate-300">ریز تراکنش‌های امروز به تفکیک روش دریافت:</h3>
+          <div id="reportItemizedLedger" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+        </div>
+
+        <button onclick="shareReportToTelegram()" class="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow">
+          <span>📋</span>
+          <span>کپی گزارش کامل حسابداری و بدهکاران (برای تلگرام / واتساپ)</span>
+        </button>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button onclick="exportToExcel('ALL')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-3 rounded-xl">
+            📥 خروجی اکسل کل مرسولات
+          </button>
+          <button onclick="exportToExcel('UNPAID')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-3 rounded-xl">
+            💳 خروجی اکسل بدهکاران
+          </button>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800 flex flex-wrap justify-end items-center gap-2">
+          <button onclick="openClearConfirmModal()" class="w-full sm:w-auto text-xs bg-rose-950/60 border border-rose-800/50 text-rose-400 px-4 py-2.5 rounded-xl font-bold">
+            🗑️ پاک کردن کل لیست امروز
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- PWA INSTALL GUIDE MODAL -->
+  <div id="pwaGuideModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <h3 class="font-bold text-sm text-sky-400">📲 افزودن به صفحه اصلی گوشی</h3>
+        <button onclick="closePwaGuideModal()" class="w-7 h-7 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">✕</button>
+      </div>
+      <div class="space-y-2.5 text-slate-300 leading-relaxed">
+        <p>برای اینکه برنامه همیشه مثل یک اپلیکیشن روی صفحه اصلی گوشی شما باشد:</p>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5">
+          <div class="font-bold text-emerald-400">در اندروید (Chrome):</div>
+          <p>روی علامت <b>⋮ (سه نقطه بالا)</b> بزنید و گزینه <b>Add to Home screen</b> یا <b>Install app</b> را انتخاب کنید.</p>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5">
+          <div class="font-bold text-sky-400">در آیفون (Safari):</div>
+          <p>روی دکمه <b>Share</b> پایین صفحه بزنید و گزینه <b>Add to Home Screen</b> را انتخاب کنید.</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="markPwaInstalledManually()" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl">✅ اضافه کردم (دیگر نشان نده)</button>
+        <button onclick="closePwaGuideModal()" class="bg-slate-800 text-slate-300 px-4 py-2.5 rounded-xl">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK DELIVERY & PAYMENT METHOD PROMPT MODAL -->
+  <div id="quickDeliverPromptModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border-t sm:border border-slate-700 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div>
+          <span class="text-xs text-emerald-400 font-bold">✅ ثبت تحویل و حسابداری لحظه‌ای</span>
+          <h3 id="qdRecipientTitle" class="font-bold text-base text-white mt-0.5"></h3>
+        </div>
+        <button onclick="closeQuickDeliverPrompt()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div id="qdAddressText" class="text-slate-300 bg-slate-950 border border-slate-800 rounded-xl p-2.5 leading-relaxed"></div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400 block mb-1">مبلغ دریافتی / پس‌کرایه (تومان):</label>
+            <input id="qdAmountInput" type="text" inputmode="numeric" dir="ltr" placeholder="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center font-mono font-black text-sm text-rose-300 outline-none focus:border-emerald-500" />
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">کد تحویل (اختیاری):</label>
+            <input id="qdCodeInput" type="text" inputmode="numeric" dir="ltr" placeholder="اختیاری..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-center font-mono font-black text-sm text-amber-300 outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="text-slate-200 font-bold pt-1">وضعیت مالی این بسته را انتخاب کنید:</div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="confirmQuickDeliveryWithMethod('PAID', 'POS')" class="bg-sky-600 hover:bg-sky-500 text-white font-black py-3 rounded-xl shadow flex flex-col items-center gap-0.5 active:scale-95 transition">
+            <span>💳 دستگاه پوز (POS)</span>
+            <span class="text-[10px] font-normal text-sky-100">دریافت با کارتخوان</span>
+          </button>
+          <button onclick="confirmQuickDeliveryWithMethod('PAID', 'CARD')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black py-3 rounded-xl shadow flex flex-col items-center gap-0.5 active:scale-95 transition">
+            <span>📲 کارت‌به‌کارت</span>
+            <span class="text-[10px] font-normal text-indigo-100">واریز به کارت</span>
+          </button>
+          <button onclick="confirmQuickDeliveryWithMethod('PAID', 'CASH')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl shadow flex flex-col items-center gap-0.5 active:scale-95 transition">
+            <span>💵 دریافت نقدی</span>
+            <span class="text-[10px] font-normal text-emerald-100">پول نقد دریافت شد</span>
+          </button>
+          <button onclick="confirmQuickDeliveryWithMethod('PAID', 'PREPAID')" class="bg-teal-700 hover:bg-teal-600 text-white font-black py-3 rounded-xl shadow flex flex-col items-center gap-0.5 active:scale-95 transition">
+            <span>✅ از قبل تسویه شده</span>
+            <span class="text-[10px] font-normal text-teal-100">بدون مبلغ دریافتی (۰ تومان)</span>
+          </button>
+          <button onclick="confirmQuickDeliveryWithMethod('UNPAID', 'NONE')" class="col-span-2 bg-rose-600/90 hover:bg-rose-500 text-white font-black py-3 rounded-xl shadow flex flex-col items-center gap-0.5 active:scale-95 transition">
+            <span>⚠️ تحویل شد ولی هنوز پرداخت نکرده (ثبت در بدهکاران)</span>
+            <span class="text-[10px] font-normal text-rose-100">مبلغ در لیست بدهکاران باقی می‌ماند</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL PARCEL DETAIL & EDIT MODAL -->
+  <div id="parcelDetailModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border-t sm:border border-slate-700 w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 space-y-3.5 max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+        <div class="flex-1">
+          <span id="modalStopBadge" class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold"></span>
+          <input id="modalRecipientInput" type="text" placeholder="نام گیرنده" class="font-bold text-base text-white mt-1 bg-transparent border-b border-slate-700 focus:border-emerald-500 outline-none w-full pb-0.5" />
+        </div>
+        <button onclick="closeParcelModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-lg shrink-0 mr-2">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1.5">
+          <div class="text-slate-400">📍 آدرس کامل مرسوله:</div>
+          <textarea id="modalAddressInput" rows="2" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-sm font-bold text-white leading-relaxed outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-slate-400 text-[10px] mb-1">📞 شماره موبایل:</div>
+            <div class="flex items-center gap-1">
+              <input id="modalPhoneInput" type="tel" dir="ltr" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 font-mono font-bold text-sky-400 text-xs text-right" />
+              <a id="modalCallLink" href="#" class="bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 px-2 py-1 rounded-lg font-bold shrink-0">📞</a>
+              <button onclick="sendQuickSms()" class="bg-sky-600/20 border border-sky-500/40 text-sky-300 px-2 py-1 rounded-lg font-bold shrink-0">💬</button>
+            </div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+            <div class="text-slate-400 text-[10px] mb-1">📦 بارکد / کد رهگیری:</div>
+            <input id="modalBarcodeInput" type="text" dir="ltr" placeholder="شماره بارکد..." class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 font-mono font-bold text-amber-300 text-xs text-right outline-none" />
+          </div>
+        </div>
+
+        <!-- PAYMENT & ACCOUNTING SECTION -->
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2.5">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-400 text-[10px] block mb-1">وضعیت پرداخت:</label>
+              <select id="modalPaymentStatus" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-white">
+                <option value="PAID">💰 تسویه‌شده (پرداخت شد)</option>
+                <option value="UNPAID">💳 بدهکار / پرداخت‌نشده</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-slate-400 text-[10px] block mb-1">روش دریافت وجه:</label>
+              <select id="modalPaymentMethod" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-xs font-bold text-white">
+                <option value="PREPAID">✅ از قبل تسویه (بدون مبلغ)</option>
+                <option value="POS">💳 دستگاه پوز سیار (POS)</option>
+                <option value="CARD">📲 کارت‌به‌کارت</option>
+                <option value="CASH">💵 نقدی</option>
+                <option value="NONE">⚠️ دریافت نشده (بدهکار)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-1">
+              <label class="text-slate-400 text-[10px] block mb-1">مبلغ (تومان):</label>
+              <input id="modalPaymentAmount" type="text" inputmode="numeric" dir="ltr" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-center font-mono font-bold text-rose-300 outline-none text-xs" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-slate-400 text-[10px] block mb-1">کد تحویل (اختیاری):</label>
+              <input id="modalDeliveryCode" type="text" inputmode="numeric" dir="ltr" placeholder="اختیاری" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2 py-1.5 text-center font-mono font-bold text-amber-300 outline-none text-xs" />
+            </div>
+            <div class="col-span-1">
+              <label class="text-slate-400 text-[10px] block mb-1">تعداد بسته:</label>
+              <input id="modalParcelCount" type="number" min="1" value="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl text-center font-bold text-white text-xs py-1.5" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Buttons -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="saveParcelStatus('تحویل شد')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs shadow-lg">
+            ✅ ذخیره و ثبت «تحویل شد»
+          </button>
+          <button onclick="saveParcelStatus('عدم حضور گیرنده')" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg">
+            🚪 ثبت «عدم حضور»
+          </button>
+          <button onclick="saveParcelStatus('آماده توزیع')" class="col-span-2 bg-slate-800 text-slate-200 font-bold py-2.5 rounded-xl text-xs">
+            💾 ذخیره تغییرات (در وضعیت آماده توزیع)
+          </button>
+        </div>
+
+        <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+          <button onclick="setAsFirstStopFromModal()" class="text-xs text-sky-400 font-medium">⏫ انتقال به اول مسیر</button>
+          <button onclick="deleteCurrentParcel()" class="text-xs text-rose-400 font-medium">🗑️ حذف این مرسوله</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GEMINI API KEY MODAL -->
+  <div id="apiKeyModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-emerald-400">🔑 تنظیم کلید اسکنر هوش مصنوعی (Gemini API)</h3>
+        <button onclick="closeApiKeyModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+        <p>برای اینکه در سایت گیت‌هاب (`github.io`) یا داخل گوشی بتوانید دهها عکس لیبل بسته را درجا و بدون مکث استخراج کنید، یک کلید رایگان از <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-sky-400 underline font-bold">Google AI Studio</a> بگیرید و در کادر زیر قرار دهید:</p>
+        <input id="userGeminiKeyInput" type="text" dir="ltr" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-left font-mono text-emerald-300 outline-none focus:border-emerald-500" />
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveUserGeminiKey()" class="flex-1 bg-emerald-600 text-white font-bold text-xs py-3 rounded-xl shadow">
+          💾 ذخیره دائمی کلید در مرورگر
+        </button>
+        <button onclick="closeApiKeyModal()" class="bg-slate-800 text-slate-300 text-xs px-4 rounded-xl">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLEAR CONFIRM MODAL -->
+  <div id="clearConfirmModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 space-y-4 text-center">
+      <div class="text-3xl">⚠️</div>
+      <h3 class="font-bold text-sm text-white">آیا کل لیست امروز پاک شود؟</h3>
+      <p class="text-xs text-slate-400">پیشنهاد می‌شود قبل از پاک کردن، از تب ترازنامه خروجی اکسل یا کپی گزارش بگیرید.</p>
+      <div class="flex gap-2">
+        <button onclick="confirmClearAllParcels()" class="flex-1 bg-rose-600 text-white font-bold text-xs py-2.5 rounded-xl">بله، پاک شود</button>
+        <button onclick="closeClearConfirmModal()" class="flex-1 bg-slate-800 text-slate-300 font-bold text-xs py-2.5 rounded-xl">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOM TOAST -->
+  <div id="toastBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-emerald-600 text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl text-center max-w-xs"></div>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 backdrop-blur border-t border-slate-800">
+    <div class="max-w-2xl mx-auto grid grid-cols-5 text-center py-1.5">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex flex-col items-center py-1 text-emerald-400">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] font-bold mt-0.5">داشبورد و مالی</span>
+      </button>
+      <button onclick="switchTab('route')" id="nav-route" class="nav-btn flex flex-col items-center py-1 text-slate-400">
+        <span class="text-lg">📦</span>
+        <span class="text-[10px] font-bold mt-0.5">مسیر و بدهکاران</span>
+      </button>
+      <button onclick="switchTab('scanner')" id="nav-scanner" class="nav-btn flex flex-col items-center py-1 text-slate-400">
+        <span class="text-lg">📸</span>
+        <span class="text-[10px] font-bold mt-0.5">اسکن رگباری</span>
+      </button>
+      <button onclick="switchTab('import')" id="nav-import" class="nav-btn flex flex-col items-center py-1 text-slate-400">
+        <span class="text-lg">📥</span>
+        <span class="text-[10px] font-bold mt-0.5">ورود اکسل</span>
+      </button>
+      <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn flex flex-col items-center py-1 text-slate-400">
+        <span class="text-lg">📊</span>
+        <span class="text-[10px] font-bold mt-0.5">ترازنامه لحظه‌ای</span>
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    const STORAGE_KEY = 'TIPAXYAR_MASHHAD_FINAL_CLEAN_V2';
+    const API_KEY_STORAGE = 'TIPAXYAR_USER_GEMINI_KEY';
+    const PWA_INSTALLED_KEY = 'TIPAXYAR_PWA_INSTALLED_FLAG';
+
+    // Canvas environment auto-injected key fallback
+    const apiKey = "";
+
+    let parcels = [];
+    let selectedParcelId = null;
+    let quickDeliverTargetId = null;
+    let activeRouteQuickFilter = 'ALL';
+    let burstMediaStream = null;
+    let burstShotCount = 0;
+    let batchQueueItems = [];
+    let isWorkerPoolRunning = false;
+    let pendingExcelRows = [];
+    let sortableInstance = null;
+    let autoMoveDelivered = true;
+    let deferredPwaPrompt = null;
+
+    function showToast(msg, isError = false) {
+      const el = document.getElementById('toastBanner');
+      el.textContent = msg;
+      el.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 ${isError ? 'bg-rose-600' : 'bg-emerald-600'} text-white text-xs font-bold px-4 py-2.5 rounded-2xl shadow-xl text-center max-w-xs`;
+      el.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.classList.add('hidden'), 3400);
+    }
+
+    /**************************************************************
+     * 0. PWA SETUP & ADD TO HOME SCREEN (AUTO-HIDE WHEN INSTALLED)
+     **************************************************************/
+    function isRunningStandalone() {
+      return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true ||
+        localStorage.getItem(PWA_INSTALLED_KEY) === 'true'
+      );
+    }
+
+    function initPwaSupport() {
+      const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="42" fill="#059669"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="900" font-size="88">TY</text></svg>`;
+      const iconUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgIcon);
+
+      const manifest = {
+        name: 'تیپاکس‌یار مشهد',
+        short_name: 'تیپاکس‌یار',
+        description: 'سامانه هوشمند توزیع و حسابداری مرسولات مشهد',
+        start_url: window.location.href,
+        display: 'standalone',
+        background_color: '#020617',
+        theme_color: '#020617',
+        dir: 'rtl',
+        lang: 'fa',
+        icons: [
+          { src: iconUrl, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: iconUrl, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+        ]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+      document.getElementById('pwaManifestLink').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+      const installBtn = document.getElementById('pwaInstallBtn');
+      if (isRunningStandalone()) {
+        installBtn.classList.add('hidden');
+        return;
+      }
+
+      installBtn.classList.remove('hidden');
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        if (!isRunningStandalone()) {
+          installBtn.classList.remove('hidden');
+        }
+      });
+
+      window.addEventListener('appinstalled', () => {
+        localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+        deferredPwaPrompt = null;
+        installBtn.classList.add('hidden');
+        showToast('✅ برنامه به صفحه اصلی گوشی اضافه شد!');
+      });
+    }
+
+    async function triggerPwaInstall() {
+      const installBtn = document.getElementById('pwaInstallBtn');
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        const { outcome } = await deferredPwaPrompt.userChoice;
+        if (outcome === 'accepted') {
+          localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+          installBtn.classList.add('hidden');
+        }
+        deferredPwaPrompt = null;
+      } else {
+        document.getElementById('pwaGuideModal').classList.remove('hidden');
+      }
+    }
+
+    function closePwaGuideModal() { document.getElementById('pwaGuideModal').classList.add('hidden'); }
+    function markPwaInstalledManually() {
+      localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+      document.getElementById('pwaInstallBtn').classList.add('hidden');
+      closePwaGuideModal();
+      showToast('✅ دکمه نصب مخفی شد');
+    }
+
+    /**************************************************************
+     * 1. PERSIAN / ARABIC NORMALIZATION & SMART EXTRACTORS
+     **************************************************************/
+    function toEnglishDigits(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
+
+    function normalizePersianText(str) {
+      if (str === null || str === undefined) return '';
+      return toEnglishDigits(String(str))
+        .replace(/ي/g, 'ی')
+        .replace(/ك/g, 'ک')
+        .replace(/ة/g, 'ه')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function parseNumericAmount(val) {
+      if (val === null || val === undefined || val === '') return 0;
+      const clean = toEnglishDigits(String(val)).replace(/[^\d]/g, '');
+      const num = clean ? parseInt(clean, 10) : 0;
+      return isNaN(num) ? 0 : num;
+    }
+
+    function formatToman(num) {
+      const n = parseNumericAmount(num);
+      return n.toLocaleString('fa-IR') + ' تومان';
+    }
+
+    function extractIranianPhone(rawText) {
+      if (!rawText) return '';
+      const clean = toEnglishDigits(String(rawText)).replace(/[\s\-_()]/g, '');
+      const mobileMatch = clean.match(/(?:\+98|98|0)?(9\d{9})/);
+      if (mobileMatch) return '0' + mobileMatch[1];
+      const landMatch = clean.match(/(051\d{8}|3\d{7})/);
+      if (landMatch) return landMatch[1].startsWith('0') ? landMatch[1] : '051' + landMatch[1];
+      return '';
+    }
+
+    function extractBarcodeFromText(rawText) {
+      if (!rawText) return '';
+      const clean = toEnglishDigits(String(rawText));
+      const tokens = clean.match(/\b\d{8,24}\b/g) || [];
+      for (const tk of tokens) {
+        if (tk.length === 11 && tk.startsWith('09')) continue;
+        if (tk.length === 10 && tk.startsWith('9')) continue;
+        return tk;
+      }
+      return '';
+    }
+
+    const MASHHAD_STREETS = [
+      { key: 'سیدرضی', regex: /(سید\s*رضی|سیدرضی)\s*(\d+)?/i, orderWeight: 10 },
+      { key: 'امامت', regex: /(امامت)\s*(\d+)?/i, orderWeight: 20 },
+      { key: 'جلال', regex: /(جلال\s*آل\s*احمد|جلال)\s*(\d+)?/i, orderWeight: 30 },
+      { key: 'استقلال', regex: /(استقلال)\s*(\d+)?/i, orderWeight: 40 },
+      { key: 'معلم', regex: /(معلم)\s*(\d+)?/i, orderWeight: 50 },
+      { key: 'دانش‌آموز', regex: /(دانش\s*آموز|دانش‌آموز)\s*(\d+)?/i, orderWeight: 60 },
+      { key: 'آموزگار', regex: /(آموزگار)\s*(\d+)?/i, orderWeight: 70 },
+      { key: 'فلاحی', regex: /(فلاحی|قاسم\s*آباد|قاسم‌آباد)\s*(\d+)?/i, orderWeight: 80 }
+    ];
+
+    function analyzeMashhadAddress(rawAddress) {
+      const clean = normalizePersianText(rawAddress);
+      let zone = 'سایر';
+      let alleyNumber = 0;
+      let parity = 'نامشخص';
+      let orderWeight = 99;
+
+      for (const st of MASHHAD_STREETS) {
+        const match = clean.match(st.regex);
+        if (match) {
+          zone = st.key;
+          orderWeight = st.orderWeight;
+          if (match[2]) {
+            alleyNumber = parseInt(match[2], 10);
+            parity = (alleyNumber % 2 === 0) ? 'زوج' : 'فرد';
+          }
+          break;
+        }
+      }
+      return { zone, alleyNumber, parity, orderWeight };
+    }
+
+    /**************************************************************
+     * 2. ULTRA-FAST PARALLEL AI OCR ENGINE (ZERO THINKING DELAY)
+     **************************************************************/
+    function getEffectiveApiKey() {
+      const savedKey = (localStorage.getItem(API_KEY_STORAGE) || '').trim();
+      return savedKey || apiKey || '';
+    }
+
+    function openApiKeyModal() {
+      document.getElementById('userGeminiKeyInput').value = localStorage.getItem(API_KEY_STORAGE) || '';
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+    }
+    function closeApiKeyModal() { document.getElementById('apiKeyModal').classList.add('hidden'); }
+    function saveUserGeminiKey() {
+      const val = document.getElementById('userGeminiKeyInput').value.trim();
+      if (val) {
+        localStorage.setItem(API_KEY_STORAGE, val);
+        showToast('✅ کلید اسکنر ذخیره شد! اکنون عکس‌ها درجا استخراج می‌شوند.');
+      } else {
+        localStorage.removeItem(API_KEY_STORAGE);
+        showToast('کلید پاک شد');
+      }
+      updateApiKeyBadgeStatus();
+      closeApiKeyModal();
+      retryFailedBatchItems();
+    }
+
+    function updateApiKeyBadgeStatus() {
+      const badge = document.getElementById('aiKeyHeaderBadge');
+      const warnBox = document.getElementById('externalApiKeyWarning');
+      const hasSaved = !!(localStorage.getItem(API_KEY_STORAGE) || '').trim();
+      const isExternalHost = window.location.hostname.includes('github.io') || window.location.protocol === 'file:';
+
+      if (hasSaved) {
+        badge.textContent = '✅ اسکنر AI آماده';
+        badge.className = 'cursor-pointer text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded-full font-bold shrink-0';
+        if (warnBox) warnBox.classList.add('hidden');
+      } else {
+        badge.textContent = '🔑 کلید اسکنر AI';
+        badge.className = 'cursor-pointer text-[10px] bg-amber-500/20 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-full font-bold shrink-0';
+        if (warnBox && isExternalHost) warnBox.classList.remove('hidden');
+      }
+    }
+
+    async function extractParcelsFromBase64Fast(base64Data) {
+      const activeKey = getEffectiveApiKey();
+
+      const prompt = `از روی این تصویر برچسب بسته پستی (تیپاکس) یا دست‌خط آدرس، تمام مشخصات گیرنده را دقیق استخراج کن و فقط به صورت JSON برگردان:
+- recipientName: نام و نام خانوادگی گیرنده (حداکثر دقت در خواندن نام گیرنده)
+- phone: شماره موبایل یا تلفن گیرنده (با صفر اول مثل 0915...)
+- barcode: شماره بارکد یا کد رهگیری مرسوله (اعداد زیر بارکد یا کد قرارداد)
+- address: آدرس کامل پستی گیرنده (خیابان، کوچه، پلاک، واحد)
+- isUnpaid: اگر روی برچسب نوشته پس‌کرایه، بدهکار، پرداخت در محل یا مبلغ قابل دریافت داشت true وگرنه false
+- amountToman: مبلغ پس‌کرایه به تومان (اگر به ریال نوشته شده یک صفر کم کن و به تومان تبدیل کن، اگر تسویه است 0)
+- parcelCount: تعداد بسته یا کارتن (پیش‌فرض 1)`;
+
+      const payload = {
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: 'image/jpeg', data: base64Data } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0,
+          thinkingConfig: { thinkingBudget: 0 },
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                recipientName: { type: 'STRING' },
+                phone: { type: 'STRING' },
+                barcode: { type: 'STRING' },
+                address: { type: 'STRING' },
+                isUnpaid: { type: 'BOOLEAN' },
+                amountToman: { type: 'INTEGER' },
+                parcelCount: { type: 'INTEGER' }
+              },
+              required: ['recipientName', 'phone', 'barcode', 'address', 'isUnpaid', 'amountToman']
+            }
+          }
+        }
+      };
+
+      // Dual-model high-speed fallback: tries gemini-2.5-flash (fastest zero-thinking vision OCR) then gemini-3-flash-preview
+      const models = ['gemini-2.5-flash', 'gemini-3-flash-preview'];
+
+      for (const modelName of models) {
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeKey}`;
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) continue;
+          const result = await response.json();
+          const rawJson = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawJson) {
+            const parsed = JSON.parse(rawJson);
+            const arr = Array.isArray(parsed) ? parsed : [parsed];
+            if (arr.length > 0) return arr;
+          }
+        } catch (err) {
+          // Try next model
+        }
+      }
+      return null;
+    }
+
+    function openBurstCameraDirectly() {
+      switchTab('scanner');
+      startBurstCamera();
+    }
+
+    async function startBurstCamera() {
+      const box = document.getElementById('burstCameraBox');
+      if (burstMediaStream) { box.classList.remove('hidden'); return; }
+      try {
+        burstMediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } },
+          audio: false
+        });
+        document.getElementById('burstVideoEl').srcObject = burstMediaStream;
+        box.classList.remove('hidden');
+      } catch (e) {
+        showToast('دوربین زنده باز نشد؛ از دکمه آبی «انتخاب عکس از گالری» استفاده کنید.', true);
+      }
+    }
+
+    function stopBurstCamera() {
+      if (burstMediaStream) {
+        burstMediaStream.getTracks().forEach(t => t.stop());
+        burstMediaStream = null;
+      }
+      document.getElementById('burstCameraBox').classList.add('hidden');
+    }
+
+    function triggerBurstCapture() {
+      const video = document.getElementById('burstVideoEl');
+      if (!video || !video.videoWidth) return;
+      const flash = document.getElementById('shutterFlashOverlay');
+      flash.classList.remove('shutter-flash');
+      void flash.offsetWidth;
+      flash.classList.add('shutter-flash');
+
+      // High-speed 720px RAM compression (~30KB) for instant upload without saving to phone gallery
+      const canvas = document.createElement('canvas');
+      const targetW = 720;
+      canvas.width = targetW;
+      canvas.height = Math.round(video.videoHeight * (targetW / video.videoWidth));
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
+
+      burstShotCount++;
+      document.getElementById('burstShotCounter').textContent = `${burstShotCount} عکس`;
+      enqueueImagesForParallelOcr([{ name: `اسکن فوری #${burstShotCount}`, dataUrl }]);
+    }
+
+    async function handleOcrImageFiles(e) {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      if (!files.length) return;
+      showToast(`⚡ در حال اسکن موازی و فوق‌سریع ${files.length} تصویر...`);
+      const compressed = await Promise.all(files.map(file => {
+        return new Promise(res => {
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            const c = document.createElement('canvas');
+            const targetW = Math.min(760, img.width);
+            c.width = targetW;
+            c.height = Math.round(img.height * (targetW / img.width));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            res({ name: file.name, dataUrl: c.toDataURL('image/jpeg', 0.72) });
+          };
+          img.onerror = () => res(null);
+          img.src = url;
+        });
+      }));
+      enqueueImagesForParallelOcr(compressed.filter(Boolean));
+    }
+
+    function enqueueImagesForParallelOcr(items) {
+      document.getElementById('batchOcrContainer').classList.remove('hidden');
+      items.forEach(item => {
+        batchQueueItems.unshift({
+          id: 'B-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          index: batchQueueItems.length + 1,
+          fileName: item.name,
+          dataUrl: item.dataUrl,
+          base64: item.dataUrl.split(',')[1],
+          status: 'pending',
+          recipient: '',
+          phone: '',
+          barcode: '',
+          address: '',
+          paymentStatus: 'PAID',
+          paymentAmount: 0,
+          parcelCount: 1,
+          addedToRoute: false
+        });
+      });
+      renderBatchQueueList();
+      updateBatchProgressUI();
+      startWorkerPoolIfNeeded();
+    }
+
+    async function startWorkerPoolIfNeeded() {
+      if (isWorkerPoolRunning) return;
+      isWorkerPoolRunning = true;
+      document.getElementById('batchSpinner').classList.remove('hidden');
+      document.getElementById('batchProgressTitle').textContent = 'در حال استخراج همزمان نام، موبایل، آدرس و بارکد...';
+
+      // 6 Parallel workers for near-instant bulk extraction
+      const CONCURRENCY = 6;
+      async function worker() {
+        while (true) {
+          const item = batchQueueItems.find(x => x.status === 'pending');
+          if (!item) break;
+          item.status = 'processing';
+          renderBatchQueueList();
+
+          const extractedList = await extractParcelsFromBase64Fast(item.base64);
+          if (extractedList && extractedList.length > 0) {
+            // If multiple labels were in one photo, add all of them!
+            extractedList.forEach((rec, idx) => {
+              const combinedRaw = `${rec.recipientName || ''} ${rec.phone || ''} ${rec.barcode || ''} ${rec.address || ''}`;
+              const cleanName = normalizePersianText(rec.recipientName || 'گیرنده');
+              const cleanPhone = extractIranianPhone(rec.phone) || extractIranianPhone(combinedRaw);
+              const cleanBarcode = normalizePersianText(rec.barcode || '') || extractBarcodeFromText(combinedRaw);
+              const cleanAddr = normalizePersianText(rec.address || '');
+              const amt = parseNumericAmount(rec.amountToman);
+              const pCount = parseInt(rec.parcelCount, 10) || 1;
+              const isUnpaid = !!(rec.isUnpaid || amt > 0);
+
+              if (idx === 0) {
+                item.recipient = cleanName;
+                item.phone = cleanPhone;
+                item.barcode = cleanBarcode;
+                item.address = cleanAddr;
+                item.paymentAmount = amt;
+                item.parcelCount = pCount;
+                item.paymentStatus = isUnpaid ? 'UNPAID' : 'PAID';
+                item.status = 'done';
+                addSingleBatchItemToMainList(item);
+              } else if (cleanAddr) {
+                // Extra parcel in same image
+                const extraItem = {
+                  id: item.id + '-EX' + idx,
+                  recipient: cleanName,
+                  phone: cleanPhone,
+                  barcode: cleanBarcode,
+                  address: cleanAddr,
+                  paymentAmount: amt,
+                  parcelCount: pCount,
+                  paymentStatus: isUnpaid ? 'UNPAID' : 'PAID',
+                  addedToRoute: false
+                };
+                addSingleBatchItemToMainList(extraItem);
+              }
+            });
+          } else {
+            item.status = 'error';
+            item.recipient = 'نیاز به کلید AI یا تکمیل دستی';
+          }
+          updateBatchProgressUI();
+          renderBatchQueueList();
+        }
+      }
+
+      const workers = [];
+      for (let i = 0; i < CONCURRENCY; i++) workers.push(worker());
+      await Promise.all(workers);
+
+      isWorkerPoolRunning = false;
+      document.getElementById('batchSpinner').classList.add('hidden');
+
+      const failedCount = batchQueueItems.filter(x => x.status === 'error').length;
+      const retryBtn = document.getElementById('btnRetryFailedOcr');
+      if (failedCount > 0) {
+        retryBtn.classList.remove('hidden');
+        document.getElementById('batchProgressTitle').textContent = `${failedCount} تصویر نیاز به کلید AI دارد (یا دستی پر کنید)`;
+        if (!getEffectiveApiKey()) openApiKeyModal();
+      } else {
+        retryBtn.classList.add('hidden');
+        document.getElementById('batchProgressTitle').textContent = '✅ تمام تصاویر با موفقیت استخراج و وارد لیست شدند!';
+      }
+    }
+
+    function retryFailedBatchItems() {
+      let hasFailed = false;
+      batchQueueItems.forEach(item => {
+        if (item.status === 'error') {
+          item.status = 'pending';
+          hasFailed = true;
+        }
+      });
+      if (hasFailed) {
+        renderBatchQueueList();
+        updateBatchProgressUI();
+        startWorkerPoolIfNeeded();
+      }
+    }
+
+    function addSingleBatchItemToMainList(item) {
+      if (item.addedToRoute || (!item.address && !item.phone && !item.barcode)) return;
+      const meta = analyzeMashhadAddress(item.address);
+      const amt = parseNumericAmount(item.paymentAmount);
+      const isUnpaid = item.paymentStatus === 'UNPAID' || amt > 0;
+      parcels.unshift({
+        id: 'P-' + item.id,
+        stopOrder: 1,
+        recipient: normalizePersianText(item.recipient) || 'گیرنده',
+        phone: normalizePersianText(item.phone),
+        barcode: normalizePersianText(item.barcode),
+        address: normalizePersianText(item.address) || 'آدرس ثبت نشده',
+        deliveryCode: '',
+        paymentStatus: isUnpaid ? 'UNPAID' : 'PAID',
+        paymentAmount: amt,
+        paymentMethod: isUnpaid ? 'NONE' : 'PREPAID',
+        parcelCount: item.parcelCount || 1,
+        status: 'آماده توزیع',
+        notes: '',
+        updatedAt: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+        ...meta
+      });
+      item.addedToRoute = true;
+      saveToStorage();
+      renderAll();
+    }
+
+    function updateBatchField(id, field, val) {
+      const item = batchQueueItems.find(x => x.id === id);
+      if (!item) return;
+      item[field] = field === 'paymentAmount' ? parseNumericAmount(val) : val;
+      if (field === 'paymentAmount' && item.paymentAmount > 0) item.paymentStatus = 'UNPAID';
+
+      if (!item.addedToRoute && item.address) {
+        addSingleBatchItemToMainList(item);
+        return;
+      }
+
+      const linked = parcels.find(p => p.id === 'P-' + id);
+      if (linked) {
+        linked[field] = item[field];
+        if (field === 'address') Object.assign(linked, analyzeMashhadAddress(val));
+        if (field === 'paymentAmount' && linked.paymentAmount > 0) {
+          linked.paymentStatus = 'UNPAID';
+          linked.paymentMethod = 'NONE';
+        }
+        saveToStorage();
+        renderAll();
+      }
+    }
+
+    function updateBatchProgressUI() {
+      const total = batchQueueItems.length;
+      const done = batchQueueItems.filter(x => x.status === 'done' || x.status === 'error').length;
+      const successCount = batchQueueItems.filter(x => x.status === 'done').length;
+      document.getElementById('batchCounterBadge').textContent = `${done} / ${total}`;
+      document.getElementById('batchProgressBar').style.width = `${total ? Math.round((done / total) * 100) : 0}%`;
+      document.getElementById('batchReadyCount').textContent = successCount;
+    }
+
+    function removeBatchItem(id) {
+      batchQueueItems = batchQueueItems.filter(x => x.id !== id);
+      renderBatchQueueList();
+      updateBatchProgressUI();
+    }
+
+    function clearBatchQueue() {
+      batchQueueItems = [];
+      document.getElementById('batchOcrContainer').classList.add('hidden');
+      renderBatchQueueList();
+    }
+
+    function renderBatchQueueList() {
+      const container = document.getElementById('batchItemsList');
+      if (!container) return;
+      container.innerHTML = batchQueueItems.map(item => `
+        <div class="bg-slate-900 border ${item.status === 'done' ? 'border-emerald-500/50' : item.status === 'error' ? 'border-rose-500/50' : 'border-slate-800'} rounded-xl p-2.5 flex gap-2.5 items-start text-xs">
+          <img src="${item.dataUrl}" class="w-16 h-16 rounded-lg object-cover border border-slate-700 shrink-0" />
+          <div class="flex-1 min-w-0 space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="font-bold ${item.status === 'done' ? 'text-emerald-400' : item.status === 'error' ? 'text-rose-400' : 'text-amber-400'}">
+                #${item.index} • ${item.status === 'processing' ? '⚡ در حال استخراج مشخصات...' : item.status === 'done' ? '✅ استخراج و به لیست اضافه شد' : '⚠️ خطا (کلید AI را بررسی کنید یا دستی بنویسید)'}
+              </span>
+              <button onclick="removeBatchItem('${item.id}')" class="text-rose-400 px-1 font-bold">✕</button>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+              <input type="text" value="${item.recipient}" oninput="updateBatchField('${item.id}', 'recipient', this.value)" placeholder="نام گیرنده" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-white font-bold" />
+              <input type="tel" dir="ltr" value="${item.phone}" oninput="updateBatchField('${item.id}', 'phone', this.value)" placeholder="0915... موبایل" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-sky-300 font-mono text-right" />
+              <input type="text" dir="ltr" value="${item.barcode}" oninput="updateBatchField('${item.id}', 'barcode', this.value)" placeholder="شماره بارکد" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-amber-300 font-mono text-right" />
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+              <input type="text" value="${item.address}" oninput="updateBatchField('${item.id}', 'address', this.value)" placeholder="آدرس کامل گیرنده..." class="col-span-2 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-white" />
+              <input type="text" inputmode="numeric" dir="ltr" value="${item.paymentAmount || ''}" oninput="updateBatchField('${item.id}', 'paymentAmount', this.value)" placeholder="پس‌کرایه (تومان)" class="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-rose-300 font-mono text-right" />
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function extractFromPastedText() {
+      const raw = normalizePersianText(document.getElementById('rawTextPasteInput').value);
+      if (!raw) { showToast('لطفاً متنی را وارد کنید', true); return; }
+
+      const phone = extractIranianPhone(raw);
+      const barcode = extractBarcodeFromText(raw);
+      const amountMatch = raw.match(/(\d[\d,]{3,9})\s*(تومان|تومن|ریال)/);
+      let amt = amountMatch ? parseNumericAmount(amountMatch[1]) : 0;
+      if (amountMatch && amountMatch[2] === 'ریال') amt = Math.round(amt / 10);
+
+      const meta = analyzeMashhadAddress(raw);
+      parcels.unshift({
+        id: 'P-' + Date.now(),
+        stopOrder: 1,
+        recipient: 'گیرنده',
+        phone,
+        barcode,
+        address: raw,
+        deliveryCode: '',
+        paymentStatus: amt > 0 ? 'UNPAID' : 'PAID',
+        paymentAmount: amt,
+        paymentMethod: amt > 0 ? 'NONE' : 'PREPAID',
+        parcelCount: 1,
+        status: 'آماده توزیع',
+        notes: '',
+        updatedAt: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+        ...meta
+      });
+      document.getElementById('rawTextPasteInput').value = '';
+      saveToStorage();
+      renderAll();
+      showToast('✅ مشخصات از متن جدا و به لیست اضافه شد');
+      switchTab('route');
+    }
+
+    /**************************************************************
+     * 3. SMART EXCEL IMPORT (AUTO-DETECT & DEEP ROW SCAN)
+     **************************************************************/
+    function handleExcelFileSelect(e) {
+      const file = e.target.files?.[0];
+      e.target.value = '';
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array', raw: false });
+          const sheet = wb.Sheets[wb.SheetNames[0]];
+          pendingExcelRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+          if (!pendingExcelRows.length) {
+            showToast('فایل اکسل خالی است!', true);
+            return;
+          }
+
+          const headers = Object.keys(pendingExcelRows[0] || {});
+          document.getElementById('excelRowCountBadge').textContent = `${pendingExcelRows.length} ردیف`;
+
+          const mapConfig = [
+            { id: 'mapColName', keys: ['نام', 'گیرنده', 'مشتری', 'تحویل گیرنده', 'recipient', 'name'] },
+            { id: 'mapColPhone', keys: ['موبایل', 'تلفن', 'همراه', 'تماس', 'phone', 'mobile', 'tel'] },
+            { id: 'mapColAddress', keys: ['آدرس', 'ادرس', 'نشانی', 'محل', 'مقصد', 'address'] },
+            { id: 'mapColBarcode', keys: ['بارکد', 'رهگیری', 'قرارداد', 'مرسوله', 'barcode', 'tracking'] },
+            { id: 'mapColAmount', keys: ['مبلغ', 'پس کرایه', 'پس‌کرایه', 'بدهی', 'کرایه', 'دریافتی', 'cod', 'amount', 'price'] },
+            { id: 'mapColNotes', keys: ['توضیح', 'کد تحویل', 'یادداشت', 'note'] }
+          ];
+
+          mapConfig.forEach(cfg => {
+            const sel = document.getElementById(cfg.id);
+            sel.innerHTML = `<option value="">-- تشخیص خودکار هوشمند --</option>` +
+              headers.map(h => `<option value="${h}">${h}</option>`).join('');
+            const foundHeader = headers.find(h => cfg.keys.some(k => normalizePersianText(h).toLowerCase().includes(k)));
+            if (foundHeader) sel.value = foundHeader;
+          });
+
+          document.getElementById('importMappingBox').classList.remove('hidden');
+          showToast(`✅ ${pendingExcelRows.length} ردیف آماده ورود است`);
+        } catch (err) {
+          showToast('خطا در خواندن فایل اکسل', true);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function confirmExcelImport() {
+      const nKey = document.getElementById('mapColName').value;
+      const pKey = document.getElementById('mapColPhone').value;
+      const aKey = document.getElementById('mapColAddress').value;
+      const bKey = document.getElementById('mapColBarcode').value;
+      const amtKey = document.getElementById('mapColAmount').value;
+      const noteKey = document.getElementById('mapColNotes').value;
+
+      let importedCount = 0;
+      pendingExcelRows.forEach((row, i) => {
+        const allValuesJoined = Object.values(row).map(v => normalizePersianText(v)).join(' | ');
+
+        let address = aKey ? normalizePersianText(row[aKey]) : '';
+        if (!address) {
+          const candidates = Object.values(row).map(v => normalizePersianText(v)).filter(v => v.length > 10 && !/^\d+$/.test(v));
+          address = candidates.sort((a, b) => b.length - a.length)[0] || '';
+        }
+        if (!address) return;
+
+        let recipient = nKey ? normalizePersianText(row[nKey]) : `گیرنده ${i + 1}`;
+        let phone = pKey ? extractIranianPhone(row[pKey]) : '';
+        if (!phone) phone = extractIranianPhone(allValuesJoined);
+
+        let barcode = bKey ? normalizePersianText(row[bKey]) : '';
+        if (!barcode) barcode = extractBarcodeFromText(allValuesJoined);
+
+        let amt = amtKey ? parseNumericAmount(row[amtKey]) : 0;
+        const notes = noteKey ? normalizePersianText(row[noteKey]) : '';
+
+        const meta = analyzeMashhadAddress(address);
+        const isUnpaid = amt > 0 || allValuesJoined.includes('پس کرایه') || allValuesJoined.includes('پس‌کرایه') || allValuesJoined.includes('بدهکار');
+
+        parcels.push({
+          id: 'P-' + Date.now() + '-' + i,
+          stopOrder: parcels.length + 1,
+          recipient: recipient || `گیرنده ${i + 1}`,
+          phone,
+          barcode,
+          address,
+          deliveryCode: '',
+          paymentStatus: isUnpaid ? 'UNPAID' : 'PAID',
+          paymentAmount: amt,
+          paymentMethod: isUnpaid ? 'NONE' : 'PREPAID',
+          parcelCount: 1,
+          status: 'آماده توزیع',
+          notes,
+          updatedAt: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+          ...meta
+        });
+        importedCount++;
+      });
+
+      saveToStorage();
+      document.getElementById('importMappingBox').classList.add('hidden');
+      renderAll();
+      showToast(`✅ ${importedCount} مرسوله با نام، موبایل، بارکد و آدرس وارد شد`);
+      switchTab('route');
+    }
+
+    /**************************************************************
+     * 4. REAL-TIME DELIVERY & EXACT ACCOUNTING ENGINE
+     **************************************************************/
+    function openQuickDeliverPrompt(parcelId, event) {
+      if (event) event.stopPropagation();
+      const p = parcels.find(x => x.id === parcelId);
+      if (!p) return;
+      quickDeliverTargetId = parcelId;
+
+      document.getElementById('qdRecipientTitle').textContent = `${p.recipient} (${p.parcelCount || 1} بسته)`;
+      document.getElementById('qdAddressText').textContent = p.address;
+      document.getElementById('qdAmountInput').value = p.paymentAmount || 0;
+      document.getElementById('qdCodeInput').value = p.deliveryCode || '';
+      document.getElementById('quickDeliverPromptModal').classList.remove('hidden');
+    }
+
+    function closeQuickDeliverPrompt() {
+      document.getElementById('quickDeliverPromptModal').classList.add('hidden');
+      quickDeliverTargetId = null;
+    }
+
+    function confirmQuickDeliveryWithMethod(payStatus, payMethod) {
+      const p = parcels.find(x => x.id === quickDeliverTargetId);
+      if (!p) return;
+
+      let enteredAmount = parseNumericAmount(document.getElementById('qdAmountInput').value);
+      const enteredCode = normalizePersianText(document.getElementById('qdCodeInput').value);
+
+      if (payMethod === 'PREPAID') {
+        enteredAmount = 0;
+      }
+
+      p.status = 'تحویل شد';
+      p.paymentStatus = payStatus;
+      p.paymentMethod = payMethod;
+      p.paymentAmount = enteredAmount;
+      if (enteredCode) p.deliveryCode = enteredCode;
+      p.updatedAt = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+
+      if (autoMoveDelivered && payStatus === 'PAID') {
+        parcels = parcels.filter(x => x.id !== p.id);
+        parcels.push(p);
+      }
+
+      saveToStorage();
+      closeQuickDeliverPrompt();
+      renderAll();
+
+      const methodLabels = {
+        POS: 'کارتخوان (POS)',
+        CARD: 'کارت‌به‌کارت',
+        CASH: 'دریافت نقدی',
+        PREPAID: 'تسویه قبلی',
+        NONE: 'بدهکار (پرداخت‌نشده)'
+      };
+      showToast(`✅ ثبت شد: ${methodLabels[payMethod]}`);
+    }
+
+    function calculateExactAccounting() {
+      let unpaidCount = 0;
+      let unpaidSum = 0;
+      let posSum = 0;
+      let posCount = 0;
+      let cardSum = 0;
+      let cardCount = 0;
+      let cashSum = 0;
+      let cashCount = 0;
+
+      parcels.forEach(p => {
+        const amt = parseNumericAmount(p.paymentAmount);
+        if (p.paymentStatus === 'UNPAID' || p.paymentMethod === 'NONE') {
+          unpaidCount++;
+          unpaidSum += amt;
+        } else if (p.paymentStatus === 'PAID') {
+          if (p.paymentMethod === 'POS') {
+            posSum += amt;
+            if (amt > 0) posCount++;
+          } else if (p.paymentMethod === 'CARD') {
+            cardSum += amt;
+            if (amt > 0) cardCount++;
+          } else if (p.paymentMethod === 'CASH') {
+            cashSum += amt;
+            if (amt > 0) cashCount++;
+          }
+        }
+      });
+
+      const totalCollected = posSum + cardSum + cashSum;
+      return {
+        unpaidCount,
+        unpaidSum,
+        posSum,
+        posCount,
+        cardSum,
+        cardCount,
+        cashSum,
+        cashCount,
+        totalCollected
+      };
+    }
+
+    /**************************************************************
+     * 5. STORAGE, SORTING & INLINE LIVE UPDATES
+     **************************************************************/
+    function loadSavedParcels() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) parcels = parsed;
+        } catch (e) { parcels = []; }
+      } else {
+        parcels = [];
+      }
+      renderAll();
+    }
+
+    function saveToStorage() {
+      parcels.forEach((p, i) => p.stopOrder = i + 1);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(parcels));
+    }
+
+    function toggleAutoMoveDelivered() {
+      autoMoveDelivered = document.getElementById('autoMoveDeliveredCheck').checked;
+      renderAll();
+    }
+
+    function initTouchSortable() {
+      const el = document.getElementById('sortableRouteList');
+      if (!el) return;
+      if (sortableInstance) sortableInstance.destroy();
+      sortableInstance = new Sortable(el, {
+        animation: 180,
+        handle: '.drag-handle',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        delay: 40,
+        touchStartThreshold: 4,
+        onEnd: () => {
+          const ids = Array.from(el.querySelectorAll('[data-parcel-id]')).map(c => c.getAttribute('data-parcel-id'));
+          const reordered = [];
+          ids.forEach(id => { const f = parcels.find(p => p.id === id); if (f) reordered.push(f); });
+          parcels.forEach(p => { if (!reordered.includes(p)) reordered.push(p); });
+          parcels = reordered;
+          saveToStorage();
+          renderAll();
+        }
+      });
+    }
+
+    function sortByMashhadZones() {
+      parcels.sort((a, b) => {
+        if (a.orderWeight !== b.orderWeight) return a.orderWeight - b.orderWeight;
+        if (a.parity !== b.parity) return a.parity === 'فرد' ? -1 : 1;
+        return (a.alleyNumber || 0) - (b.alleyNumber || 0);
+      });
+      saveToStorage();
+      renderAll();
+      showToast('⚡ مسیر بر اساس پهنه‌های مشهد مرتب شد');
+    }
+
+    function reverseRouteOrder() {
+      parcels.reverse();
+      saveToStorage();
+      renderAll();
+      showToast('🔄 ترتیب مسیر معکوس شد');
+    }
+
+    function setQuickStatus(id, newStatus, event) {
+      if (event) event.stopPropagation();
+      if (newStatus === 'تحویل شد') {
+        openQuickDeliverPrompt(id, event);
+        return;
+      }
+      const p = parcels.find(x => x.id === id);
+      if (!p) return;
+      p.status = newStatus;
+      p.updatedAt = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+      saveToStorage();
+      renderAll();
+      showToast(`ثبت شد: ${newStatus}`);
+    }
+
+    function changePaymentMethodInline(id, method, event) {
+      if (event) event.stopPropagation();
+      const p = parcels.find(x => x.id === id);
+      if (!p) return;
+      p.paymentMethod = method;
+      if (method === 'NONE') {
+        p.paymentStatus = 'UNPAID';
+      } else {
+        p.paymentStatus = 'PAID';
+        if (method === 'PREPAID') p.paymentAmount = 0;
+      }
+      p.updatedAt = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+      saveToStorage();
+      renderAll();
+    }
+
+    function updateInlinePaymentAmount(id, val) {
+      const p = parcels.find(x => x.id === id);
+      if (!p) return;
+      const num = parseNumericAmount(val);
+      p.paymentAmount = num;
+      // If user types an amount while it was PREPAID, default to UNPAID unless already POS/CARD/CASH
+      if (num > 0 && p.paymentMethod === 'PREPAID') {
+        p.paymentStatus = 'UNPAID';
+        p.paymentMethod = 'NONE';
+      }
+      saveToStorage();
+      updateLiveFinancialWidgets();
+    }
+
+    function updateInlineDeliveryCode(id, val) {
+      const p = parcels.find(x => x.id === id);
+      if (!p) return;
+      p.deliveryCode = normalizePersianText(val);
+      saveToStorage();
+    }
+
+    function filterRouteFromDash(f) { setRouteQuickFilter(f); switchTab('route'); }
+    function setRouteQuickFilter(f) {
+      activeRouteQuickFilter = f;
+      document.querySelectorAll('.flt-pill').forEach(btn => btn.className = 'flt-pill shrink-0 text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-xl font-bold');
+      const active = document.getElementById(`flt-${f}`);
+      if (active) active.className = f === 'UNPAID' ? 'flt-pill shrink-0 text-xs bg-rose-600 text-white px-3 py-1.5 rounded-xl font-black shadow' : 'flt-pill shrink-0 text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-xl font-black shadow';
+      renderRouteList();
+    }
+
+    function updateLiveFinancialWidgets() {
+      const acc = calculateExactAccounting();
+
+      // Top Sticky Live Bar
+      document.getElementById('topBarPos').textContent = acc.posSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('topBarCard').textContent = acc.cardSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('topBarCash').textContent = acc.cashSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('topBarUnpaid').textContent = acc.unpaidSum.toLocaleString('fa-IR') + ' ت';
+
+      // Dashboard Accounting Cards
+      document.getElementById('statUnpaid').textContent = acc.unpaidCount;
+      document.getElementById('dashTotalCollectedBadge').textContent = `کل وصولی: ${acc.totalCollected.toLocaleString('fa-IR')} تومان`;
+      document.getElementById('accPosSum').textContent = acc.posSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('accPosCount').textContent = `${acc.posCount} تراکنش`;
+      document.getElementById('accCardSum').textContent = acc.cardSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('accCardCount').textContent = `${acc.cardCount} تراکنش`;
+      document.getElementById('accCashSum').textContent = acc.cashSum.toLocaleString('fa-IR') + ' ت';
+      document.getElementById('accCashCount').textContent = `${acc.cashCount} تراکنش`;
+      document.getElementById('dashUnpaidAmountSum').textContent = `${acc.unpaidSum.toLocaleString('fa-IR')} تومان (${acc.unpaidCount} بسته بدهکار)`;
+
+      // Filter Counts
+      const all = parcels.length;
+      const paid = parcels.filter(p => p.paymentStatus === 'PAID').length;
+      const delivered = parcels.filter(p => p.status === 'تحویل شد').length;
+      const pending = parcels.filter(p => p.status === 'آماده توزیع').length;
+      const absent = parcels.filter(p => p.status === 'عدم حضور گیرنده').length;
+
+      document.getElementById('cnt-ALL').textContent = all;
+      document.getElementById('cnt-UNPAID').textContent = acc.unpaidCount;
+      document.getElementById('cnt-PAID').textContent = paid;
+      document.getElementById('cnt-PENDING').textContent = pending;
+      document.getElementById('cnt-DELIVERED').textContent = delivered;
+      document.getElementById('cnt-ABSENT').textContent = absent;
+
+      const bar = document.getElementById('routeUnpaidSummaryBar');
+      if (acc.unpaidCount > 0) {
+        bar.classList.remove('hidden');
+        document.getElementById('routeUnpaidTotalText').textContent = `${acc.unpaidSum.toLocaleString('fa-IR')} تومان (${acc.unpaidCount} بسته)`;
+      } else {
+        bar.classList.add('hidden');
+      }
+
+      renderReportsAccounting();
+    }
+
+    /**************************************************************
+     * 6. UI RENDERING (DASHBOARD, ROUTE CARDS, LIVE LEDGER)
+     **************************************************************/
+    function renderAll() {
+      updateLiveFinancialWidgets();
+      renderDashboard();
+      renderRouteList();
+    }
+
+    function renderDashboard() {
+      const total = parcels.length;
+      const delivered = parcels.filter(p => p.status === 'تحویل شد').length;
+      const absent = parcels.filter(p => p.status === 'عدم حضور گیرنده').length;
+      const pending = parcels.filter(p => p.status === 'آماده توزیع').length;
+      const pct = total > 0 ? Math.round((delivered / total) * 100) : 0;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statDelivered').textContent = delivered;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statFailed').textContent = absent;
+
+      document.getElementById('dashProgressText').textContent = pct + '%';
+      document.getElementById('dashProgressBar').style.width = pct + '%';
+
+      const nextStop = parcels.find(p => p.status === 'آماده توزیع');
+      const nextCard = document.getElementById('nextStopCard');
+      if (parcels.length === 0) {
+        nextCard.innerHTML = `<div class="text-center py-3 text-slate-400 text-xs">هنوز مرسوله‌ای ثبت نشده است. از دکمه <b>اسکن رگباری</b> یا <b>ورود اکسل</b> استفاده کنید.</div>`;
+      } else if (nextStop) {
+        const isUnpaid = nextStop.paymentStatus === 'UNPAID';
+        nextCard.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold">ایستگاه بعدی: #${nextStop.stopOrder} (${nextStop.zone})</span>
+            <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-lg ${isUnpaid ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}">
+              ${isUnpaid ? `💳 پس‌کرایه: ${formatToman(nextStop.paymentAmount)}` : '💰 تسویه شده'}
+            </span>
+          </div>
+          <div class="font-bold text-base text-white mb-1">
+            ${nextStop.recipient}
+            <span class="text-xs text-amber-400 font-normal">(${nextStop.parcelCount || 1} بسته)</span>
+            ${nextStop.barcode ? `<span class="text-[11px] text-slate-400 font-mono mr-1">[بارکد: ${nextStop.barcode}]</span>` : ''}
+          </div>
+          <div class="text-xs text-slate-300 mb-3 leading-relaxed">${nextStop.address}</div>
+          <div class="grid grid-cols-3 gap-2">
+            <a href="tel:${nextStop.phone}" class="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-1 shadow">
+              📞 ${nextStop.phone || 'بدون شماره'}
+            </a>
+            <button onclick="openQuickDeliverPrompt('${nextStop.id}', event)" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl shadow">
+              ✅ تحویل و تسویه
+            </button>
+            <button onclick="openParcelModal('${nextStop.id}')" class="bg-slate-800 text-slate-200 text-xs font-bold py-2.5 rounded-xl">
+              📝 جزئیات
+            </button>
+          </div>
+        `;
+      } else {
+        nextCard.innerHTML = `<div class="text-center py-3 text-emerald-400 font-bold text-sm">🎉 تمام مرسولات آماده توزیع تعیین تکلیف شدند!</div>`;
+      }
+
+      const zones = ['سیدرضی', 'امامت', 'جلال', 'استقلال', 'معلم', 'دانش‌آموز', 'آموزگار', 'فلاحی'];
+      document.getElementById('zoneStatsContainer').innerHTML = zones.map(z => {
+        const zItems = parcels.filter(p => p.zone === z);
+        return `
+          <div onclick="document.getElementById('routeZoneFilter').value='${z}';switchTab('route');renderRouteList();" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex justify-between items-center cursor-pointer hover:border-emerald-500/40">
+            <div class="font-bold text-slate-200">${z}</div>
+            <span class="text-sm font-black text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-lg">${zItems.length}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderRouteList() {
+      const container = document.getElementById('sortableRouteList');
+      const q = normalizePersianText(document.getElementById('routeSearchInput')?.value || '').toLowerCase();
+      const zoneFilter = document.getElementById('routeZoneFilter')?.value || 'ALL';
+
+      const filtered = parcels.filter(p => {
+        if (zoneFilter !== 'ALL' && p.zone !== zoneFilter) return false;
+        if (activeRouteQuickFilter === 'UNPAID' && p.paymentStatus !== 'UNPAID') return false;
+        if (activeRouteQuickFilter === 'PAID' && p.paymentStatus !== 'PAID') return false;
+        if (activeRouteQuickFilter === 'PENDING' && p.status !== 'آماده توزیع') return false;
+        if (activeRouteQuickFilter === 'DELIVERED' && p.status !== 'تحویل شد') return false;
+        if (activeRouteQuickFilter === 'ABSENT' && p.status !== 'عدم حضور گیرنده') return false;
+        if (!q) return true;
+        return (
+          normalizePersianText(p.recipient).toLowerCase().includes(q) ||
+          normalizePersianText(p.address).toLowerCase().includes(q) ||
+          normalizePersianText(p.phone).includes(q) ||
+          normalizePersianText(p.barcode).includes(q) ||
+          normalizePersianText(p.deliveryCode).includes(q)
+        );
+      });
+
+      if (!filtered.length) {
+        container.innerHTML = `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-xs text-slate-400">مرسوله‌ای در این فیلتر یافت نشد.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(p => {
+        const isDelivered = p.status === 'تحویل شد';
+        const isAbsent = p.status === 'عدم حضور گیرنده';
+        const isUnpaid = p.paymentStatus === 'UNPAID' || p.paymentMethod === 'NONE';
+
+        return `
+          <div data-parcel-id="${p.id}" onclick="openParcelModal('${p.id}')" class="bg-slate-900 border ${isUnpaid ? 'border-rose-500/60' : isDelivered ? 'border-emerald-900/60 opacity-90' : 'border-slate-800'} rounded-2xl p-3 shadow flex items-stretch gap-2.5 transition">
+            <!-- Touch Drag Handle -->
+            <div class="drag-handle w-10 bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center shrink-0 text-slate-400" onclick="event.stopPropagation()">
+              <span class="text-xs font-black text-emerald-400">#${p.stopOrder}</span>
+              <span class="text-lg leading-none mt-1">☰</span>
+            </div>
+
+            <div class="flex-1 min-w-0 space-y-2">
+              <!-- Header: Name + Count + Status -->
+              <div class="flex items-center justify-between gap-1">
+                <div class="font-bold text-sm text-white truncate">
+                  👤 ${p.recipient}
+                  <span class="text-[10px] text-amber-300 font-normal">(${p.parcelCount || 1} بسته)</span>
+                </div>
+                <span class="text-[10px] border px-2 py-0.5 rounded-full font-bold shrink-0 ${isDelivered ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' : isAbsent ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-sky-500/20 border-sky-500/40 text-sky-300'}">
+                  ${p.status}
+                </span>
+              </div>
+
+              <!-- Address -->
+              <div class="text-xs text-slate-200 leading-relaxed">📍 ${p.address}</div>
+
+              <!-- Barcode & Delivery Code Row -->
+              <div class="flex flex-wrap items-center justify-between gap-1.5 text-[11px]" onclick="event.stopPropagation()">
+                <div class="flex items-center gap-1.5">
+                  <span class="bg-slate-950 border border-slate-800 text-slate-300 px-2 py-0.5 rounded-lg font-mono">
+                    📦 بارکد: <b class="text-amber-300">${p.barcode || 'ندارد'}</b>
+                  </span>
+                  <span class="bg-slate-950 border border-slate-800 text-emerald-300 px-2 py-0.5 rounded-lg">
+                    ${p.zone}${p.alleyNumber ? ' ' + p.alleyNumber : ''} (${p.parity})
+                  </span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="text-[10px] text-slate-400">کد تحویل:</span>
+                  <input type="text" inputmode="numeric" dir="ltr" value="${p.deliveryCode || ''}" oninput="updateInlineDeliveryCode('${p.id}', this.value)" placeholder="اختیاری" class="w-16 bg-slate-950 border border-slate-700 rounded-lg px-1.5 py-0.5 text-center font-mono font-bold text-amber-300 text-xs outline-none focus:border-emerald-500" />
+                </div>
+              </div>
+
+              <!-- Phone & Live Payment Method Selector Row -->
+              <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950 border ${isUnpaid ? 'border-rose-500/50 bg-rose-950/20' : 'border-slate-800'} rounded-xl px-2.5 py-1.5 text-[11px]" onclick="event.stopPropagation()">
+                <div class="flex items-center gap-1.5">
+                  <a href="tel:${p.phone}" class="bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 shadow">
+                    <span>📞</span>
+                    <span dir="ltr" class="font-mono">${p.phone || 'بدون شماره'}</span>
+                  </a>
+                  <button onclick="sendSmsForParcel('${p.id}', event)" class="bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 px-2 py-1 rounded-lg font-bold">
+                    💬 پیامک
+                  </button>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <select onchange="changePaymentMethodInline('${p.id}', this.value, event)" class="bg-slate-900 border ${isUnpaid ? 'border-rose-500 text-rose-300' : 'border-emerald-600/50 text-emerald-300'} rounded-lg px-1.5 py-1 text-[11px] font-bold outline-none">
+                    <option value="NONE" ${isUnpaid ? 'selected' : ''}>⚠️ بدهکار / پس‌کرایه</option>
+                    <option value="POS" ${!isUnpaid && p.paymentMethod === 'POS' ? 'selected' : ''}>💳 پوز (POS)</option>
+                    <option value="CARD" ${!isUnpaid && p.paymentMethod === 'CARD' ? 'selected' : ''}>📲 کارت‌به‌کارت</option>
+                    <option value="CASH" ${!isUnpaid && p.paymentMethod === 'CASH' ? 'selected' : ''}>💵 نقدی</option>
+                    <option value="PREPAID" ${!isUnpaid && (p.paymentMethod === 'PREPAID' || !p.paymentMethod) ? 'selected' : ''}>✅ تسویه قبلی</option>
+                  </select>
+                  <input type="text" inputmode="numeric" dir="ltr" value="${p.paymentAmount || ''}" oninput="updateInlinePaymentAmount('${p.id}', this.value)" placeholder="مبلغ (تومان)" class="w-20 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-rose-300 text-xs outline-none focus:border-emerald-500" />
+                </div>
+              </div>
+
+              <!-- Quick Action Buttons -->
+              <div class="grid grid-cols-2 gap-1.5 pt-0.5" onclick="event.stopPropagation()">
+                <button onclick="openQuickDeliverPrompt('${p.id}', event)" class="bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600 hover:text-white text-[11px] font-bold py-1.5 rounded-xl transition">
+                  ✅ تحویل و تسویه
+                </button>
+                <button onclick="setQuickStatus('${p.id}', 'عدم حضور گیرنده', event)" class="bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-slate-950 text-[11px] font-bold py-1.5 rounded-xl transition">
+                  🚪 عدم حضور
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      initTouchSortable();
+    }
+
+    function renderReportsAccounting() {
+      const box = document.getElementById('reportAccountingSummaryBox');
+      const ledgerEl = document.getElementById('reportItemizedLedger');
+      if (!box) return;
+      const acc = calculateExactAccounting();
+
+      box.innerHTML = `
+        <div class="flex justify-between items-center py-1.5 border-b border-slate-800">
+          <span class="text-slate-300">💳 جمع دریافتی با دستگاه پوز (${acc.posCount} مورد):</span>
+          <span class="font-black text-sky-400 text-sm">${acc.posSum.toLocaleString('fa-IR')} تومان</span>
+        </div>
+        <div class="flex justify-between items-center py-1.5 border-b border-slate-800">
+          <span class="text-slate-300">📲 جمع دریافتی کارت‌به‌کارت (${acc.cardCount} مورد):</span>
+          <span class="font-black text-indigo-400 text-sm">${acc.cardSum.toLocaleString('fa-IR')} تومان</span>
+        </div>
+        <div class="flex justify-between items-center py-1.5 border-b border-slate-800">
+          <span class="text-slate-300">💵 جمع دریافتی نقدی (${acc.cashCount} مورد):</span>
+          <span class="font-black text-emerald-400 text-sm">${acc.cashSum.toLocaleString('fa-IR')} تومان</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b border-slate-800 bg-emerald-950/30 px-2.5 rounded-xl">
+          <span class="text-emerald-200 font-bold">💰 جمع کل وجوه وصول‌شده امروز:</span>
+          <span class="font-black text-emerald-400 text-base">${acc.totalCollected.toLocaleString('fa-IR')} تومان</span>
+        </div>
+        <div class="flex justify-between items-center py-2 bg-rose-950/40 px-2.5 rounded-xl">
+          <span class="text-rose-200 font-bold">⚠️ جمع کل بدهی دریافت‌نشده (${acc.unpaidCount} بسته):</span>
+          <span class="font-black text-rose-400 text-base">${acc.unpaidSum.toLocaleString('fa-IR')} تومان</span>
+        </div>
+      `;
+
+      if (!ledgerEl) return;
+      const financialParcels = parcels.filter(p => parseNumericAmount(p.paymentAmount) > 0 || p.paymentStatus === 'UNPAID');
+      if (financialParcels.length === 0) {
+        ledgerEl.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs">هنوز تراکنش مالی یا پس‌کرایه‌ای ثبت نشده است.</div>`;
+        return;
+      }
+
+      const methodBadge = {
+        POS: '<span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-md font-bold">💳 پوز (POS)</span>',
+        CARD: '<span class="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md font-bold">📲 کارت‌به‌کارت</span>',
+        CASH: '<span class="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md font-bold">💵 نقدی</span>',
+        NONE: '<span class="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-md font-bold">⚠️ بدهکار (دریافت‌نشده)</span>'
+      };
+
+      ledgerEl.innerHTML = financialParcels.map(p => {
+        const mKey = p.paymentStatus === 'UNPAID' ? 'NONE' : (p.paymentMethod || 'CASH');
+        return `
+          <div onclick="openParcelModal('${p.id}')" class="bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs cursor-pointer">
+            <div class="min-w-0">
+              <div class="font-bold text-white truncate">${p.recipient} <span class="text-[10px] text-slate-400 font-mono">(${p.phone || 'بدون تلفن'})</span></div>
+              <div class="text-[10px] text-slate-400 truncate mt-0.5">${p.address}</div>
+            </div>
+            <div class="text-left shrink-0 space-y-1">
+              <div class="font-black text-rose-300 font-mono">${formatToman(p.paymentAmount)}</div>
+              <div class="text-[10px]">${methodBadge[mKey] || methodBadge.CASH}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /**************************************************************
+     * 7. FULL DETAIL MODAL & SMS / TELEGRAM SHARE
+     **************************************************************/
+    function openParcelModal(id) {
+      const p = parcels.find(x => x.id === id);
+      if (!p) return;
+      selectedParcelId = id;
+      document.getElementById('modalStopBadge').textContent = `ایستگاه #${p.stopOrder} • ${p.zone}`;
+      document.getElementById('modalRecipientInput').value = p.recipient;
+      document.getElementById('modalAddressInput').value = p.address;
+      document.getElementById('modalPhoneInput').value = p.phone || '';
+      document.getElementById('modalBarcodeInput').value = p.barcode || '';
+      document.getElementById('modalCallLink').href = p.phone ? `tel:${p.phone}` : '#';
+      document.getElementById('modalDeliveryCode').value = p.deliveryCode || '';
+      document.getElementById('modalPaymentStatus').value = p.paymentStatus;
+      document.getElementById('modalPaymentAmount').value = p.paymentAmount || 0;
+      document.getElementById('modalPaymentMethod').value = p.paymentMethod || (p.paymentStatus === 'UNPAID' ? 'NONE' : 'PREPAID');
+      document.getElementById('modalParcelCount').value = p.parcelCount || 1;
+      document.getElementById('parcelDetailModal').classList.remove('hidden');
+    }
+
+    function closeParcelModal() {
+      document.getElementById('parcelDetailModal').classList.add('hidden');
+      selectedParcelId = null;
+    }
+
+    function saveParcelStatus(newStatus) {
+      const p = parcels.find(x => x.id === selectedParcelId);
+      if (!p) return;
+      p.recipient = normalizePersianText(document.getElementById('modalRecipientInput').value) || 'گیرنده';
+      p.address = normalizePersianText(document.getElementById('modalAddressInput').value);
+      p.phone = normalizePersianText(document.getElementById('modalPhoneInput').value);
+      p.barcode = normalizePersianText(document.getElementById('modalBarcodeInput').value);
+      p.deliveryCode = normalizePersianText(document.getElementById('modalDeliveryCode').value);
+      p.paymentStatus = document.getElementById('modalPaymentStatus').value;
+      p.paymentAmount = parseNumericAmount(document.getElementById('modalPaymentAmount').value);
+      p.paymentMethod = document.getElementById('modalPaymentMethod').value;
+
+      if (p.paymentMethod === 'NONE') {
+        p.paymentStatus = 'UNPAID';
+      } else {
+        p.paymentStatus = 'PAID';
+        if (p.paymentMethod === 'PREPAID') p.paymentAmount = 0;
+      }
+
+      p.parcelCount = parseInt(document.getElementById('modalParcelCount').value, 10) || 1;
+      p.status = newStatus;
+      p.updatedAt = new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+      Object.assign(p, analyzeMashhadAddress(p.address));
+
+      if (newStatus === 'تحویل شد' && autoMoveDelivered && p.paymentStatus === 'PAID') {
+        parcels = parcels.filter(x => x.id !== selectedParcelId);
+        parcels.push(p);
+      }
+      saveToStorage();
+      closeParcelModal();
+      renderAll();
+      showToast('✅ اطلاعات و حسابداری بروزرسانی شد');
+    }
+
+    function sendQuickSms() {
+      const p = parcels.find(x => x.id === selectedParcelId);
+      if (!p || !p.phone) { showToast('شماره تلفن ثبت نشده است', true); return; }
+      const text = encodeURIComponent(`سلام ${p.recipient} عزیز، مامور تیپاکس هستم. بسته شما (${p.barcode ? 'بارکد ' + p.barcode : ''}) در محدوده ${p.address} آماده تحویل است.`);
+      window.location.href = `sms:${p.phone}?body=${text}`;
+    }
+
+    function sendSmsForParcel(id, event) {
+      if (event) event.stopPropagation();
+      const p = parcels.find(x => x.id === id);
+      if (!p || !p.phone) { showToast('شماره تلفن موجود نیست', true); return; }
+      const msg = p.paymentStatus === 'UNPAID' && p.paymentAmount > 0
+        ? `سلام ${p.recipient} عزیز، مامور تیپاکس هستم. بسته شما با مبلغ پس‌کرایه ${formatToman(p.paymentAmount)} در آدرس ${p.address} آماده تحویل است.`
+        : `سلام ${p.recipient} عزیز، مامور تیپاکس هستم. بسته شما در آدرس ${p.address} آماده تحویل است.`;
+      window.location.href = `sms:${p.phone}?body=${encodeURIComponent(msg)}`;
+    }
+
+    function copyTextFallback(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    function shareReportToTelegram() {
+      const acc = calculateExactAccounting();
+      const unpaid = parcels.filter(p => p.paymentStatus === 'UNPAID');
+      let text = `📦 گزارش حسابداری لحظه‌ای تیپاکس‌یار مشهد (${new Date().toLocaleDateString('fa-IR')})\n`;
+      text += `━━━━━━━━━━━━━━\n`;
+      text += `💳 جمع پوز (POS): ${acc.posSum.toLocaleString('fa-IR')} تومان (${acc.posCount} مورد)\n`;
+      text += `📲 جمع کارت‌به‌کارت: ${acc.cardSum.toLocaleString('fa-IR')} تومان (${acc.cardCount} مورد)\n`;
+      text += `💵 جمع نقدی: ${acc.cashSum.toLocaleString('fa-IR')} تومان (${acc.cashCount} مورد)\n`;
+      text += `💰 کل وصولی امروز: ${acc.totalCollected.toLocaleString('fa-IR')} تومان\n`;
+      text += `━━━━━━━━━━━━━━\n`;
+      text += `⚠️ لیست بدهکاران (${acc.unpaidCount} بسته - جمع: ${acc.unpaidSum.toLocaleString('fa-IR')} تومان):\n\n`;
+      unpaid.forEach((p, i) => {
+        text += `${i + 1}. ${p.recipient} | 📞 ${p.phone || 'بدون شماره'}\n`;
+        text += `📦 بارکد: ${p.barcode || '-'} | 💳 مبلغ: ${formatToman(p.paymentAmount)}\n`;
+        text += `📍 آدرس: ${p.address}\n\n`;
+      });
+      copyTextFallback(text);
+      showToast('📋 گزارش کامل کپی شد! در تلگرام یا واتساپ Paste کنید.');
+    }
+
+    function setAsFirstStopFromModal() {
+      const idx = parcels.findIndex(x => x.id === selectedParcelId);
+      if (idx > 0) {
+        const it = parcels.splice(idx, 1)[0];
+        parcels.unshift(it);
+        saveToStorage();
+        closeParcelModal();
+        renderAll();
+      }
+    }
+
+    function deleteCurrentParcel() {
+      parcels = parcels.filter(x => x.id !== selectedParcelId);
+      saveToStorage();
+      closeParcelModal();
+      renderAll();
+      showToast('🗑️ مرسوله حذف شد');
+    }
+
+    function addManualParcel() {
+      const recipient = normalizePersianText(document.getElementById('addName').value) || 'گیرنده';
+      const phone = extractIranianPhone(document.getElementById('addPhone').value) || normalizePersianText(document.getElementById('addPhone').value);
+      const address = normalizePersianText(document.getElementById('addAddress').value);
+      const barcode = normalizePersianText(document.getElementById('addBarcode').value);
+      const deliveryCode = normalizePersianText(document.getElementById('addCode').value);
+      const payStatus = document.getElementById('addPaymentStatus').value;
+      const amt = parseNumericAmount(document.getElementById('addPaymentAmount').value);
+
+      if (!address) { showToast('لطفاً آدرس را وارد کنید', true); return; }
+
+      const isUnpaid = amt > 0 || payStatus === 'UNPAID';
+      const meta = analyzeMashhadAddress(address);
+      parcels.unshift({
+        id: 'P-' + Date.now(),
+        stopOrder: 1,
+        recipient,
+        phone,
+        barcode,
+        address,
+        deliveryCode,
+        paymentStatus: isUnpaid ? 'UNPAID' : 'PAID',
+        paymentAmount: amt,
+        paymentMethod: isUnpaid ? 'NONE' : 'PREPAID',
+        parcelCount: 1,
+        status: 'آماده توزیع',
+        notes: '',
+        updatedAt: new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+        ...meta
+      });
+
+      ['addName','addPhone','addAddress','addBarcode','addCode','addPaymentAmount'].forEach(id => document.getElementById(id).value = '');
+      saveToStorage();
+      renderAll();
+      showToast('✅ مرسوله ثبت شد');
+      switchTab('route');
+    }
+
+    function exportToExcel(type) {
+      let list = parcels;
+      if (type === 'UNPAID') list = parcels.filter(p => p.paymentStatus === 'UNPAID');
+      const methodMap = { POS: 'پوز سیار', CARD: 'کارت به کارت', CASH: 'نقدی', PREPAID: 'تسویه قبلی', NONE: 'بدهکار (پرداخت نشده)' };
+      const rows = list.map(p => ({
+        'ردیف': p.stopOrder,
+        'نام گیرنده': p.recipient,
+        'شماره تماس': p.phone,
+        'بارکد مرسوله': p.barcode,
+        'آدرس کامل': p.address,
+        'پهنه مشهد': p.zone,
+        'کد تحویل': p.deliveryCode,
+        'وضعیت پرداخت': p.paymentStatus === 'UNPAID' ? 'بدهکار' : 'تسویه شده',
+        'روش پرداخت': methodMap[p.paymentMethod] || '',
+        'مبلغ (تومان)': p.paymentAmount || 0,
+        'وضعیت تحویل': p.status,
+        'ساعت ثبت': p.updatedAt
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'TipaxYar_Report');
+      XLSX.writeFile(wb, `TipaxYar_Mashhad_${type}.xlsx`);
+    }
+
+    function openClearConfirmModal() { document.getElementById('clearConfirmModal').classList.remove('hidden'); }
+    function closeClearConfirmModal() { document.getElementById('clearConfirmModal').classList.add('hidden'); }
+    function confirmClearAllParcels() {
+      parcels = [];
+      saveToStorage();
+      closeClearConfirmModal();
+      renderAll();
+      showToast('🗑️ لیست امروز خالی شد');
+    }
+
+    function downloadSampleTemplate() {
+      const sample = [
+        { 'نام گیرنده': 'علی اکبری', 'شماره موبایل': '09151112233', 'بارکد مرسوله': '64019988771', 'آدرس کامل': 'مشهد، سیدرضی 57 پلاک 14', 'مبلغ پس کرایه': '125000', 'توضیحات': 'واحد ۲' },
+        { 'نام گیرنده': 'سارا رضایی', 'شماره موبایل': '09352223344', 'بارکد مرسوله': '64019988772', 'آدرس کامل': 'مشهد، امامت 42 پلاک 8', 'مبلغ پس کرایه': '0', 'توضیحات': 'تسویه شده' }
+      ];
+      const ws = XLSX.utils.json_to_sheet(sample);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      XLSX.writeFile(wb, 'TipaxYar_Sample_Excel.xlsx');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-emerald-400');
+        btn.classList.add('text-slate-400');
+      });
+      const active = document.getElementById(`nav-${tab}`);
+      if (active) {
+        active.classList.remove('text-slate-400');
+        active.classList.add('text-emerald-400');
+      }
+      if (tab !== 'scanner') stopBurstCamera();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      try {
+        document.getElementById('jalaliDateBadge').textContent = new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date());
+      } catch (e) {}
+      initPwaSupport();
+      updateApiKeyBadgeStatus();
+      loadSavedParcels();
+    });
+  </script>
+</body>
+</html>
